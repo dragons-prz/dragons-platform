@@ -1,12 +1,24 @@
-import { fetchGuildChannels, fetchGuildConfig, fetchGuildRoles } from "../api/guild";
-import { ErrorScreen, LoadingScreen } from "../components/StatusScreen";
-import { useApiData } from "../hooks/useApiData";
+import type {
+  DiscordChannelSummary,
+  DiscordRoleSummary,
+  GuildConfig,
+  GuildConfigHealthCheck,
+  GuildConfigHealthLevel,
+  UpdateGuildConfigRequest
+} from "@dragons/shared";
+import { useState } from "react";
 
-interface ResolvedRow {
-  label: string;
-  id: string | null;
-  name: string | null;
-}
+import { ApiError } from "../api/client";
+import {
+  fetchGuildChannels,
+  fetchGuildConfig,
+  fetchGuildConfigHealth,
+  fetchGuildRoles,
+  updateGuildConfig
+} from "../api/guild";
+import { ErrorScreen, LoadingScreen } from "../components/StatusScreen";
+import type { ApiDataState } from "../hooks/useApiData";
+import { useApiData } from "../hooks/useApiData";
 
 export function SettingsPage() {
   const configState = useApiData(fetchGuildConfig, []);
@@ -35,89 +47,322 @@ export function SettingsPage() {
     );
   }
 
-  const config = configState.data;
-  const rolesById = new Map(rolesState.data.map((role) => [role.id, role]));
-  const channelsById = new Map(channelsState.data.map((channel) => [channel.id, channel]));
+  return (
+    <SettingsForm
+      key={configState.data.guildId}
+      initialConfig={configState.data}
+      roles={rolesState.data}
+      channels={channelsState.data}
+    />
+  );
+}
 
-  const roleRows: ResolvedRow[] = [
-    {
-      label: "Recrutador",
-      id: config.recruiterRoleId,
-      name: rolesById.get(config.recruiterRoleId)?.name ?? null
-    },
-    {
-      label: "Founder",
-      id: config.founderRoleId,
-      name: rolesById.get(config.founderRoleId)?.name ?? null
-    },
-    {
-      label: "Membro",
-      id: config.memberRoleId,
-      name: rolesById.get(config.memberRoleId)?.name ?? null
-    }
-  ];
+interface FormState {
+  recruiterRoleId: string;
+  founderRoleId: string;
+  memberRoleId: string;
+  approvalChannelId: string;
+  recruitmentAnnouncementChannelId: string;
+  blacklistLogChannelId: string;
+}
 
-  const channelRows: ResolvedRow[] = [
-    {
-      label: "Aprovação de recrutamento",
-      id: config.approvalChannelId,
-      name: config.approvalChannelId
-        ? (channelsById.get(config.approvalChannelId)?.name ?? null)
-        : null
-    },
-    {
-      label: "Anúncio de recrutamento",
-      id: config.recruitmentAnnouncementChannelId,
-      name: channelsById.get(config.recruitmentAnnouncementChannelId)?.name ?? null
-    },
-    {
-      label: "Log de blacklist",
-      id: config.blacklistLogChannelId,
-      name: channelsById.get(config.blacklistLogChannelId)?.name ?? null
+function toFormState(config: GuildConfig): FormState {
+  return {
+    recruiterRoleId: config.recruiterRoleId,
+    founderRoleId: config.founderRoleId,
+    memberRoleId: config.memberRoleId,
+    approvalChannelId: config.approvalChannelId ?? "",
+    recruitmentAnnouncementChannelId: config.recruitmentAnnouncementChannelId,
+    blacklistLogChannelId: config.blacklistLogChannelId
+  };
+}
+
+/** Monta o patch com apenas os campos que mudaram — mantém `config.updated` legível no log. */
+function buildPatch(saved: FormState, form: FormState): UpdateGuildConfigRequest {
+  const patch: UpdateGuildConfigRequest = {};
+  if (form.recruiterRoleId !== saved.recruiterRoleId) patch.recruiterRoleId = form.recruiterRoleId;
+  if (form.founderRoleId !== saved.founderRoleId) patch.founderRoleId = form.founderRoleId;
+  if (form.memberRoleId !== saved.memberRoleId) patch.memberRoleId = form.memberRoleId;
+  if (form.approvalChannelId !== saved.approvalChannelId) {
+    patch.approvalChannelId = form.approvalChannelId === "" ? null : form.approvalChannelId;
+  }
+  if (form.recruitmentAnnouncementChannelId !== saved.recruitmentAnnouncementChannelId) {
+    patch.recruitmentAnnouncementChannelId = form.recruitmentAnnouncementChannelId;
+  }
+  if (form.blacklistLogChannelId !== saved.blacklistLogChannelId) {
+    patch.blacklistLogChannelId = form.blacklistLogChannelId;
+  }
+  return patch;
+}
+
+type SaveState = "idle" | "saving" | "saved" | "error";
+
+function SettingsForm({
+  initialConfig,
+  roles,
+  channels
+}: {
+  initialConfig: GuildConfig;
+  roles: DiscordRoleSummary[];
+  channels: DiscordChannelSummary[];
+}) {
+  const [saved, setSaved] = useState<FormState>(() => toFormState(initialConfig));
+  const [form, setForm] = useState<FormState>(() => toFormState(initialConfig));
+  const [saveState, setSaveState] = useState<SaveState>("idle");
+  const [saveError, setSaveError] = useState<string | null>(null);
+  const [healthReload, setHealthReload] = useState(0);
+
+  const healthState = useApiData(fetchGuildConfigHealth, [healthReload]);
+
+  const roleOptions = [...roles]
+    .sort((a, b) => a.name.localeCompare(b.name))
+    .map((role) => ({ id: role.id, label: role.name }));
+  const channelOptions = [...channels]
+    .sort((a, b) => a.name.localeCompare(b.name))
+    .map((channel) => ({ id: channel.id, label: `#${channel.name}` }));
+
+  const patch = buildPatch(saved, form);
+  const isDirty = Object.keys(patch).length > 0;
+  const requiredFilled =
+    form.recruiterRoleId !== "" &&
+    form.founderRoleId !== "" &&
+    form.memberRoleId !== "" &&
+    form.recruitmentAnnouncementChannelId !== "" &&
+    form.blacklistLogChannelId !== "";
+  const canSave = saveState !== "saving" && isDirty && requiredFilled;
+
+  function set<K extends keyof FormState>(key: K, value: string) {
+    setForm((current) => ({ ...current, [key]: value }));
+  }
+
+  async function handleSave() {
+    if (!canSave) return;
+    setSaveState("saving");
+    setSaveError(null);
+    try {
+      const updated = await updateGuildConfig(patch);
+      const next = toFormState(updated);
+      setSaved(next);
+      setForm(next);
+      setSaveState("saved");
+      setHealthReload((value) => value + 1);
+      window.setTimeout(
+        () => setSaveState((current) => (current === "saved" ? "idle" : current)),
+        2500
+      );
+    } catch (error) {
+      setSaveState("error");
+      setSaveError(
+        error instanceof ApiError ? error.message : "Não foi possível salvar a configuração."
+      );
     }
-  ];
+  }
+
+  const saveLabel =
+    saveState === "saving" ? "Salvando..." : saveState === "saved" ? "Salvo" : "Salvar";
 
   return (
     <div className="flex flex-col gap-6">
       <div>
         <h1 className="font-display text-2xl font-bold text-ink">Configuração</h1>
         <p className="mt-1 font-body text-sm text-ink-muted">
-          Cargos e canais atualmente configurados para este servidor. Somente leitura por enquanto —
-          a edição chega em uma próxima fase.
+          Cargos e canais que o bot Dragons usa neste servidor. As alterações valem para o bot assim
+          que são salvas — ele lê o mesmo Firestore.
         </p>
       </div>
 
       <section className="rounded-xl border border-line bg-surface p-6">
-        <h2 className="font-display text-lg font-semibold text-ink">Cargos</h2>
-        <ResolvedTable rows={roleRows} emptyLabel="Cargo não configurado" />
+        <h2 className="font-display text-lg font-semibold text-ink">Saúde da integração</h2>
+        <HealthBlock state={healthState} />
       </section>
 
-      <section className="rounded-xl border border-line bg-surface p-6">
-        <h2 className="font-display text-lg font-semibold text-ink">Canais</h2>
-        <ResolvedTable rows={channelRows} emptyLabel="Canal não configurado" />
+      <section className="flex flex-col gap-5 rounded-xl border border-line bg-surface p-6">
+        <h2 className="font-display text-lg font-semibold text-ink">Cargos</h2>
+
+        <SelectField
+          label="Recrutador"
+          hint="Quem pode usar /recrutar."
+          value={form.recruiterRoleId}
+          onChange={(value) => set("recruiterRoleId", value)}
+          options={roleOptions}
+          unknownLabel="Cargo desconhecido"
+        />
+        <SelectField
+          label="Founder"
+          hint="Quem aprova recrutamentos — e quem tem acesso a este painel. Cuidado ao trocar."
+          value={form.founderRoleId}
+          onChange={(value) => set("founderRoleId", value)}
+          options={roleOptions}
+          unknownLabel="Cargo desconhecido"
+        />
+        <SelectField
+          label="Membro"
+          hint="Cargo aplicado ao usuário aprovado."
+          value={form.memberRoleId}
+          onChange={(value) => set("memberRoleId", value)}
+          options={roleOptions}
+          unknownLabel="Cargo desconhecido"
+        />
       </section>
+
+      <section className="flex flex-col gap-5 rounded-xl border border-line bg-surface p-6">
+        <h2 className="font-display text-lg font-semibold text-ink">Canais</h2>
+
+        <SelectField
+          label="Aprovação de recrutamento"
+          hint="Opcional. Sem canal, o bot manda a aprovação por DM aos founders."
+          value={form.approvalChannelId}
+          onChange={(value) => set("approvalChannelId", value)}
+          options={channelOptions}
+          unknownLabel="Canal desconhecido"
+          emptyOption="— Nenhum (aprovação por DM) —"
+        />
+        <SelectField
+          label="Anúncio de recrutamento"
+          hint="Recebe o anúncio quando um recrutamento é aprovado."
+          value={form.recruitmentAnnouncementChannelId}
+          onChange={(value) => set("recruitmentAnnouncementChannelId", value)}
+          options={channelOptions}
+          unknownLabel="Canal desconhecido"
+        />
+        <SelectField
+          label="Log de blacklist"
+          hint="Recebe adições e remoções da blacklist."
+          value={form.blacklistLogChannelId}
+          onChange={(value) => set("blacklistLogChannelId", value)}
+          options={channelOptions}
+          unknownLabel="Canal desconhecido"
+        />
+      </section>
+
+      <div className="flex flex-col gap-2">
+        <div className="flex items-center gap-3">
+          <button
+            type="button"
+            onClick={() => void handleSave()}
+            disabled={!canSave}
+            className="w-fit rounded-lg bg-ember px-5 py-2.5 font-display text-sm font-semibold text-on-accent transition-colors hover:bg-ember/85 disabled:cursor-not-allowed disabled:opacity-40"
+          >
+            {saveLabel}
+          </button>
+          {isDirty && saveState !== "saving" ? (
+            <span className="font-body text-xs text-warn">Alterações não salvas</span>
+          ) : null}
+          {isDirty && !requiredFilled ? (
+            <span className="font-body text-xs text-danger">
+              Cargos e os dois canais obrigatórios precisam estar preenchidos.
+            </span>
+          ) : null}
+        </div>
+        {saveError ? (
+          <p role="alert" className="font-body text-sm text-danger">
+            {saveError}
+          </p>
+        ) : null}
+      </div>
     </div>
   );
 }
 
-function ResolvedTable({ rows, emptyLabel }: { rows: ResolvedRow[]; emptyLabel: string }) {
+function SelectField({
+  label,
+  hint,
+  value,
+  onChange,
+  options,
+  unknownLabel,
+  emptyOption
+}: {
+  label: string;
+  hint?: string;
+  value: string;
+  onChange: (value: string) => void;
+  options: Array<{ id: string; label: string }>;
+  unknownLabel: string;
+  emptyOption?: string;
+}) {
+  const known = options.some((option) => option.id === value);
   return (
-    <dl className="mt-4 flex flex-col divide-y divide-line">
-      {rows.map((row) => (
-        <div key={row.label} className="flex items-center justify-between gap-4 py-3">
-          <dt className="font-body text-sm text-ink-muted">{row.label}</dt>
-          <dd className="text-right font-body text-sm text-ink">
-            {row.id ? (
-              <>
-                <span className="font-medium">{row.name ?? "Cargo/canal não encontrado"}</span>{" "}
-                <span className="font-mono text-xs text-ink-muted">({row.id})</span>
-              </>
-            ) : (
-              <span className="text-ink-muted">{emptyLabel}</span>
-            )}
-          </dd>
-        </div>
-      ))}
-    </dl>
+    <div className="flex flex-col gap-1">
+      <label className="font-body text-xs font-medium text-ink-muted">{label}</label>
+      <select
+        value={value}
+        onChange={(event) => onChange(event.target.value)}
+        className="rounded-lg border border-line bg-ground px-3 py-2 font-body text-sm text-ink outline-none focus-visible:border-ember"
+      >
+        {emptyOption ? <option value="">{emptyOption}</option> : null}
+        {!known && value ? (
+          <option value={value}>
+            {unknownLabel} ({value})
+          </option>
+        ) : null}
+        {options.map((option) => (
+          <option key={option.id} value={option.id}>
+            {option.label}
+          </option>
+        ))}
+      </select>
+      {hint ? <p className="font-body text-xs text-ink-muted">{hint}</p> : null}
+    </div>
+  );
+}
+
+const DOT_CLASS: Record<GuildConfigHealthLevel, string> = {
+  ok: "bg-ok",
+  warning: "bg-warn",
+  error: "bg-danger"
+};
+
+const WORST_LABEL: Record<GuildConfigHealthLevel, string> = {
+  ok: "Tudo certo",
+  warning: "Atenção",
+  error: "Problemas na configuração"
+};
+
+function HealthBlock({
+  state
+}: {
+  state: ApiDataState<{ checks: GuildConfigHealthCheck[]; worst: GuildConfigHealthLevel }>;
+}) {
+  if (state.status === "loading") {
+    return (
+      <p className="mt-3 font-body text-sm text-ink-muted">
+        Verificando integração com o Discord...
+      </p>
+    );
+  }
+  if (state.status === "error") {
+    return (
+      <p className="mt-3 font-body text-sm text-danger">
+        Não foi possível verificar: {state.message}
+      </p>
+    );
+  }
+
+  const { checks, worst } = state.data;
+  return (
+    <>
+      <p className="mt-1 flex items-center gap-2 font-body text-sm text-ink">
+        <span
+          aria-hidden="true"
+          className={`h-2.5 w-2.5 shrink-0 rounded-full ${DOT_CLASS[worst]}`}
+        />
+        {WORST_LABEL[worst]}
+      </p>
+      <ul className="mt-3 flex flex-col divide-y divide-line">
+        {checks.map((check) => (
+          <li key={check.id} className="flex items-start gap-3 py-3">
+            <span
+              aria-hidden="true"
+              className={`mt-1.5 h-2 w-2 shrink-0 rounded-full ${DOT_CLASS[check.level]}`}
+            />
+            <div className="flex flex-col">
+              <span className="font-body text-sm text-ink">{check.label}</span>
+              <span className="font-body text-xs text-ink-muted">{check.detail}</span>
+            </div>
+          </li>
+        ))}
+      </ul>
+    </>
   );
 }

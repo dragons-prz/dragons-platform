@@ -2,13 +2,23 @@ import type {
   DiscordChannelSummary,
   DiscordEmojiSummary,
   DiscordRoleSummary,
-  GuildConfig
+  GuildConfig,
+  GuildConfigHealthResponse,
+  UpdateGuildConfigRequest
 } from "@dragons/shared";
 
-import { apiGet } from "./client";
+import { apiGet, apiPatch } from "./client";
 
 export function fetchGuildConfig(signal?: AbortSignal): Promise<GuildConfig> {
   return apiGet<GuildConfig>("/api/config", signal);
+}
+
+export function updateGuildConfig(body: UpdateGuildConfigRequest): Promise<GuildConfig> {
+  return apiPatch<GuildConfig>("/api/config", body);
+}
+
+export function fetchGuildConfigHealth(signal?: AbortSignal): Promise<GuildConfigHealthResponse> {
+  return apiGet<GuildConfigHealthResponse>("/api/config/health", signal);
 }
 
 export function fetchGuildChannels(signal?: AbortSignal): Promise<DiscordChannelSummary[]> {
