@@ -29,8 +29,13 @@ Configure as variáveis de ambiente do servidor:
 cp .env.example .env
 ```
 
-Nesta fase (scaffold), nenhuma credencial real é necessária — o servidor
-sobe apenas com `PORT` (padrão `3000` se não definido).
+Desde a fase 1 (autenticação), o servidor exige credenciais reais para
+subir: um app OAuth2 do Discord (`DISCORD_CLIENT_ID`/`_SECRET`), o token
+do bot (`DISCORD_TOKEN`), o ID da guild (`DISCORD_GUILD_ID`), um
+`SESSION_SECRET` (ex.: `openssl rand -hex 32`) e o caminho da service
+account do Firebase (`FIREBASE_SERVICE_ACCOUNT_PATH`) — veja
+`.env.example` para a lista completa e `server/src/config/env.ts` para
+como cada uma é validada.
 
 Em dois terminais:
 
@@ -39,8 +44,8 @@ npm run dev:server   # API Fastify em http://localhost:3000
 npm run dev:client   # SPA Vite em http://localhost:5173 (proxy /api -> :3000)
 ```
 
-Abra `http://localhost:5173` — a página deve mostrar o resultado da
-chamada a `GET /api/health`.
+Abra `http://localhost:5173` — deve aparecer a tela de login ("Entrar com
+Discord").
 
 ## Verificação
 

@@ -76,16 +76,17 @@ Não há suíte de testes automatizada ainda nesta fase.
 ## Ambiente
 
 - Node.js >= 22.
-- Variáveis de ambiente em `.env` (veja `.env.example`). Nesta fase 0, o
-  servidor sobe sem nenhuma credencial real: apenas `PORT` é validado de
-  forma estrita em `server/src/config/env.ts`. As demais chaves (Discord
-  OAuth, `DISCORD_TOKEN`, `SESSION_SECRET`,
-  `FIREBASE_SERVICE_ACCOUNT_PATH`) são lidas de forma opcional — quando as
-  rotas correspondentes forem implementadas, troque para a função
-  `required(...)` já presente nesse arquivo (mesmo padrão de
-  `dragonsbot/src/config/env.ts`), para falhar cedo com mensagem clara.
-- Sem `.env`/credenciais válidas, ainda não há nada para testar fim a fim
-  (não existem rotas de OAuth/Firestore nesta fase).
+- Variáveis de ambiente em `.env` (veja `.env.example`). Desde a fase 1
+  (autenticação), `DISCORD_CLIENT_ID`, `DISCORD_CLIENT_SECRET`,
+  `DISCORD_TOKEN`, `DISCORD_GUILD_ID`, `DISCORD_REDIRECT_URI`,
+  `SESSION_SECRET` e `FIREBASE_SERVICE_ACCOUNT_PATH` são obrigatórias —
+  o servidor falha cedo na subida (`required(...)` em
+  `server/src/config/env.ts`, mesmo padrão de
+  `dragonsbot/src/config/env.ts`) se alguma faltar. `CLIENT_ORIGIN` e
+  `NODE_ENV` são opcionais (defaults para desenvolvimento local).
+- Sem um `.env` com credenciais reais (Discord OAuth app + bot token +
+  service account do Firestore), o servidor não sobe — não dá para
+  testar o fluxo de login fim a fim sem elas.
 
 ## Convenções
 
