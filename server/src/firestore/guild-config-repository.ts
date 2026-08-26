@@ -1,4 +1,5 @@
 import type { GuildConfig } from "@dragons/shared";
+import { GUILD_CONFIG_DEFAULTS } from "@dragons/shared";
 import { cert, getApps, initializeApp } from "firebase-admin/app";
 import type { ServiceAccount } from "firebase-admin/app";
 import { getFirestore } from "firebase-admin/firestore";
@@ -25,7 +26,38 @@ export function ensureFirebaseApp(env: AppEnv): void {
 }
 
 /**
- * Busca o documento `guildConfigs/{guildId}` completo no Firestore.
+ * Aplica em memoria os mesmos defaults que o bot usa em `mapGuildConfig`
+ * (`FirestoreDragonsStore`), para campos que podem nao existir no documento
+ * ate o bot rodar com a versao que os introduziu. Sem isto, o painel leria
+ * `undefined` em `memberVerificationChannelId` / `recruitmentPoints` / etc.
+ * enquanto o bot nao tivesse feito o backfill. O `guildId` tambem e injetado
+ * aqui porque o documento nao guarda esse campo (o bot o adiciona no map).
+ */
+function normalizeGuildConfig(guildId: string, data: Partial<GuildConfig>): GuildConfig {
+  return {
+    guildId,
+    recruiterRoleId: data.recruiterRoleId ?? "",
+    founderRoleId: data.founderRoleId ?? "",
+    memberRoleId: data.memberRoleId ?? "",
+    approvalChannelId: data.approvalChannelId ?? null,
+    recruitmentAnnouncementChannelId:
+      data.recruitmentAnnouncementChannelId ??
+      GUILD_CONFIG_DEFAULTS.recruitmentAnnouncementChannelId,
+    blacklistLogChannelId:
+      data.blacklistLogChannelId ?? GUILD_CONFIG_DEFAULTS.blacklistLogChannelId,
+    memberVerificationChannelId:
+      data.memberVerificationChannelId ?? GUILD_CONFIG_DEFAULTS.memberVerificationChannelId,
+    memberExitChannelId: data.memberExitChannelId ?? GUILD_CONFIG_DEFAULTS.memberExitChannelId,
+    recruitmentPoints: data.recruitmentPoints ?? GUILD_CONFIG_DEFAULTS.recruitmentPoints,
+    recruitmentCreditWindowHours:
+      data.recruitmentCreditWindowHours ?? GUILD_CONFIG_DEFAULTS.recruitmentCreditWindowHours,
+    hierarchySeeded: data.hierarchySeeded ?? false
+  };
+}
+
+/**
+ * Busca o documento `guildConfigs/{guildId}` completo no Firestore, com os
+ * defaults do bot aplicados (`normalizeGuildConfig`).
  *
  * Diferente do bot, o painel NAO cria o documento se ele nao existir —
  * ausencia de `guildConfigs/{guildId}` e tratada como erro claro, porque o
@@ -41,7 +73,7 @@ export async function getGuildConfig(env: AppEnv, guildId: string): Promise<Guil
     );
   }
 
-  return snapshot.data() as GuildConfig;
+  return normalizeGuildConfig(guildId, snapshot.data() as Partial<GuildConfig>);
 }
 
 /** Campos de `guildConfigs/{guildId}` que o painel pode reescrever (subset de `GuildConfig`). */
@@ -104,7 +136,7 @@ export async function updateGuildConfig(
   }
 
   const fresh = await ref.get();
-  return fresh.data() as GuildConfig;
+  return normalizeGuildConfig(guildId, fresh.data() as Partial<GuildConfig>);
 }
 
 /**

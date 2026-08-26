@@ -14,6 +14,23 @@ export type RoleConfigKey = "recruiter" | "founder" | "member";
 export type ChannelConfigKey = "approval" | "recruitment" | "blacklist" | "verification" | "exit";
 export type NumberConfigKey = "points" | "credit-window-hours";
 
+/**
+ * Valores padrao dos campos opcionais-na-pratica do `guildConfigs/{guildId}`,
+ * espelho dos `DEFAULT_*` / `MEMBER_*` / `RECRUITMENT_*` de
+ * `dragonsbot/src/domain/types.ts`. O bot grava esses defaults no documento
+ * no primeiro `getGuildConfig`; o painel os aplica em memoria na leitura
+ * (`normalizeGuildConfig`) para refletir o valor efetivo mesmo antes de o
+ * bot ter rodado com o campo novo.
+ */
+export const GUILD_CONFIG_DEFAULTS = {
+  recruitmentAnnouncementChannelId: "1522080152094249140",
+  blacklistLogChannelId: "1541992716496273478",
+  memberVerificationChannelId: "1534723901421256784",
+  memberExitChannelId: "1534735482460831884",
+  recruitmentPoints: 8,
+  recruitmentCreditWindowHours: 24
+} as const;
+
 export interface GuildConfig {
   guildId: string;
   recruiterRoleId: string;
