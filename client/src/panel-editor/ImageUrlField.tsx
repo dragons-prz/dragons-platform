@@ -11,11 +11,13 @@ import { WarningIcon } from "../components/icons";
 export function ImageUrlField({
   value,
   onChange,
-  error
+  error,
+  label = "URL da imagem (opcional)"
 }: {
   value: string;
   onChange: (next: string) => void;
   error: string | null;
+  label?: string;
 }) {
   const fieldId = useId();
   const showEphemeralWarning = value.trim().length > 0 && isEphemeralDiscordAttachmentUrl(value);
@@ -23,7 +25,7 @@ export function ImageUrlField({
   return (
     <div className="flex flex-col gap-1">
       <label htmlFor={fieldId} className="font-body text-xs font-medium text-ink-muted">
-        URL da imagem (opcional)
+        {label}
       </label>
       <input
         id={fieldId}

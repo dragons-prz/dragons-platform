@@ -16,6 +16,8 @@ export interface LocalButton {
   emoji: string | null;
   style: PanelButtonStyle;
   response: string;
+  responseImageUrl: string | null;
+  responseColor: string | null;
 }
 
 export function createLocalButtonId(): string {

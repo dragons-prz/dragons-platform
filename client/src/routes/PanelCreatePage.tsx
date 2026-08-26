@@ -19,6 +19,7 @@ import { DiscordPanelPreview } from "../discord-preview/DiscordPanelPreview";
 const EMPTY_PANEL_FOR_PREVIEW: Omit<PanelConfig, "id" | "title" | "description"> = {
   guildId: "",
   imageUrl: null,
+  color: null,
   buttons: [],
   createdAt: "",
   updatedAt: ""

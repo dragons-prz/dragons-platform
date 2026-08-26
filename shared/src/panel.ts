@@ -18,6 +18,8 @@ export interface PanelButtonConfig {
   emoji: string | null;
   style: PanelButtonStyle;
   response: string;
+  responseImageUrl: string | null;
+  responseColor: string | null;
   order: number;
 }
 
@@ -27,6 +29,7 @@ export interface PanelConfig {
   title: string;
   description: string;
   imageUrl: string | null;
+  color: string | null;
   buttons: PanelButtonConfig[];
   createdAt: string;
   updatedAt: string;

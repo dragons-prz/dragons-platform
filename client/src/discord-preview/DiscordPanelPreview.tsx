@@ -22,13 +22,14 @@ function chunkIntoRows(buttons: PanelButtonConfig[]): PanelButtonConfig[][] {
  * Pre-visualizacao fiel de um painel (embed + botoes) como apareceria no
  * Discord. Cores/tipografia sao literais de `discord-preview/colors.ts` —
  * nunca os tokens do painel. Clicar num botao mostra abaixo a
- * pre-visualizacao da resposta efemera que o membro receberia.
+ * pre-visualizacao da resposta efemera que o membro receberia, agora
+ * tambem como um embed (barra lateral colorida + imagem opcional).
  *
- * Nota de fidelidade: `dragonsbot/src/commands/painel.ts` (buildPanelMessage)
- * nunca chama `.setColor()` no embed — o bot publica sem cor de destaque
- * definida, e o Discord real nao desenha barra lateral colorida nesse caso.
- * Por isso o preview usa uma barra neutra (`embedAccentDefault`), igual ao
- * que o Discord mostra hoje, em vez de inventar uma cor de marca.
+ * `panel.color` (e `button.responseColor` na resposta efemera) definem a
+ * cor real da barra lateral do embed, exatamente como o bot passa a fazer
+ * via `.setColor()`. Sem cor definida, a barra usa o mesmo neutro
+ * (`embedAccentDefault`) que o proprio Discord desenha para qualquer embed
+ * sem cor customizada.
  */
 export function DiscordPanelPreview({ panel }: { panel: PanelConfig }) {
   const [activeButtonId, setActiveButtonId] = useState<string | null>(null);
@@ -42,7 +43,11 @@ export function DiscordPanelPreview({ panel }: { panel: PanelConfig }) {
     >
       <div className="flex overflow-hidden rounded" style={{ maxWidth: "26rem" }}>
         <div
-          style={{ width: 4, flexShrink: 0, backgroundColor: discordColors.embedAccentDefault }}
+          style={{
+            width: 4,
+            flexShrink: 0,
+            backgroundColor: panel.color ?? discordColors.embedAccentDefault
+          }}
         />
         <div
           className="flex flex-1 flex-col gap-2 p-4"
@@ -160,25 +165,54 @@ function PreviewButton({
   );
 }
 
-/** Pre-visualizacao da mensagem efemera ("Só você pode ver esta mensagem") que o membro receberia ao clicar num botao. */
+/**
+ * Pre-visualizacao da mensagem efemera ("Só você pode ver esta mensagem")
+ * que o membro receberia ao clicar num botao. O bot responde com um embed
+ * de verdade (descricao = `response`, imagem e cor opcionais) — por isso o
+ * preview e um mini-embed com a mesma estrutura visual do embed principal
+ * (barra lateral + imagem abaixo do texto), nao so um bloco de texto solto.
+ */
 function EphemeralResponsePreview({ button }: { button: PanelButtonConfig }) {
   return (
     <div
       className="mt-3 rounded-lg p-3"
       style={{ backgroundColor: discordColors.ephemeralSurface, fontFamily: discordFontFamily }}
     >
-      <p
-        style={{
-          color: discordColors.embedText,
-          fontSize: "14px",
-          lineHeight: 1.45,
-          margin: 0,
-          whiteSpace: "pre-wrap",
-          overflowWrap: "anywhere"
-        }}
-      >
-        {renderDiscordText(button.response)}
-      </p>
+      <div className="flex overflow-hidden rounded" style={{ maxWidth: "26rem" }}>
+        <div
+          style={{
+            width: 4,
+            flexShrink: 0,
+            backgroundColor: button.responseColor ?? discordColors.embedAccentDefault
+          }}
+        />
+        <div
+          className="flex flex-1 flex-col gap-2 p-3"
+          style={{ backgroundColor: discordColors.embedSurface }}
+        >
+          <p
+            style={{
+              color: discordColors.embedText,
+              fontSize: "14px",
+              lineHeight: 1.45,
+              margin: 0,
+              whiteSpace: "pre-wrap",
+              overflowWrap: "anywhere"
+            }}
+          >
+            {renderDiscordText(button.response)}
+          </p>
+
+          {button.responseImageUrl ? (
+            <img
+              src={button.responseImageUrl}
+              alt=""
+              className="mt-1 rounded"
+              style={{ maxWidth: "100%", display: "block" }}
+            />
+          ) : null}
+        </div>
+      </div>
       <p style={{ color: discordColors.ephemeralFooter, fontSize: "12px", margin: "6px 0 0" }}>
         Só você pode ver esta mensagem
       </p>
