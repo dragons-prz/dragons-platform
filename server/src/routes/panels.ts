@@ -11,6 +11,7 @@ import type {
 import {
   assignButtonIds,
   validateButtons,
+  validateColor,
   validateDescription,
   validateImageUrl,
   validatePanelId,
@@ -115,6 +116,7 @@ export function registerPanelRoutes(app: FastifyInstance, env: AppEnv): void {
           title?: string;
           description?: string;
           imageUrl?: string | null;
+          color?: string | null;
           buttons?: PanelButtonConfig[];
         } = {};
 
@@ -136,6 +138,14 @@ export function registerPanelRoutes(app: FastifyInstance, env: AppEnv): void {
             if (error) throw new ValidationError(error);
           }
           patch.imageUrl = body.imageUrl;
+        }
+
+        if (body.color !== undefined) {
+          if (body.color !== null) {
+            const error = validateColor(body.color);
+            if (error) throw new ValidationError(error);
+          }
+          patch.color = body.color;
         }
 
         if (body.buttons !== undefined) {

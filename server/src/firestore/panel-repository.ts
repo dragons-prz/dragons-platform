@@ -15,8 +15,25 @@ import { ensureFirebaseApp } from "./guild-config-repository.js";
  * nao e feita por este repositorio.
  */
 
-function sortButtons(panel: PanelConfig): PanelConfig {
-  return { ...panel, buttons: [...panel.buttons].sort((a, b) => a.order - b.order) };
+/**
+ * Ordena os botoes por `order` e preenche com `null` os campos novos
+ * (`color`, `responseImageUrl`, `responseColor`) em documentos antigos que
+ * foram criados antes deles existirem — sem isso o client receberia
+ * `undefined` em vez de `null` para paineis/botoes salvos antes desta
+ * mudanca.
+ */
+function normalizePanel(panel: PanelConfig): PanelConfig {
+  return {
+    ...panel,
+    color: panel.color ?? null,
+    buttons: [...panel.buttons]
+      .sort((a, b) => a.order - b.order)
+      .map((button) => ({
+        ...button,
+        responseImageUrl: button.responseImageUrl ?? null,
+        responseColor: button.responseColor ?? null
+      }))
+  };
 }
 
 function panelRef(guildId: string, id: string) {
@@ -29,7 +46,7 @@ export async function listPanels(env: AppEnv, guildId: string): Promise<PanelCon
 
   const snapshot = await getFirestore().collection("panels").where("guildId", "==", guildId).get();
   return snapshot.docs
-    .map((doc) => sortButtons(doc.data() as PanelConfig))
+    .map((doc) => normalizePanel(doc.data() as PanelConfig))
     .sort((a, b) => a.id.localeCompare(b.id));
 }
 
@@ -49,7 +66,7 @@ export async function getPanel(
   // Defesa extra: um doc-id malformado nao deveria vazar dados de outra guild.
   if (panel.guildId !== guildId) return null;
 
-  return sortButtons(panel);
+  return normalizePanel(panel);
 }
 
 /**
@@ -78,6 +95,7 @@ export async function createPanel(
     title,
     description,
     imageUrl: null,
+    color: null,
     buttons: [],
     createdAt: now,
     updatedAt: now
@@ -90,6 +108,7 @@ export interface PanelUpdate {
   title?: string;
   description?: string;
   imageUrl?: string | null;
+  color?: string | null;
   buttons?: PanelButtonConfig[];
 }
 
@@ -113,11 +132,12 @@ export async function updatePanel(
   if (patch.title !== undefined) update.title = patch.title;
   if (patch.description !== undefined) update.description = patch.description;
   if (patch.imageUrl !== undefined) update.imageUrl = patch.imageUrl;
+  if (patch.color !== undefined) update.color = patch.color;
   if (patch.buttons !== undefined) update.buttons = patch.buttons;
 
   await ref.update(update);
   const updated = await ref.get();
-  return sortButtons(updated.data() as PanelConfig);
+  return normalizePanel(updated.data() as PanelConfig);
 }
 
 /** Remove um painel. */

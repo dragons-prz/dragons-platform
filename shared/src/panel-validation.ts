@@ -17,6 +17,8 @@ export const PANEL_LIMITS = {
 
 export const PANEL_ID_PATTERN = /^[a-z0-9-]{1,40}$/;
 
+export const HEX_COLOR_PATTERN = /^#[0-9a-fA-F]{6}$/;
+
 const VALID_BUTTON_STYLES: readonly PanelButtonStyle[] = [
   "Primary",
   "Secondary",
@@ -92,6 +94,14 @@ export function isEphemeralDiscordAttachmentUrl(url: string): boolean {
   return /cdn\.discordapp\.com\/attachments\/|ephemeral-attachments/i.test(url);
 }
 
+/** Valida uma cor hexadecimal (ex.: "#E03131"), usada na barra lateral do embed do painel ou de uma resposta de botao. */
+export function validateColor(value: string): string | null {
+  if (!HEX_COLOR_PATTERN.test(value)) {
+    return "A cor deve estar no formato hexadecimal, como #E03131.";
+  }
+  return null;
+}
+
 /** Valida o array completo de botoes de um painel (limite de quantidade + cada campo). */
 export function validateButtons(buttons: readonly PanelButtonInput[]): string | null {
   if (buttons.length > PANEL_LIMITS.MAX_BUTTONS) {
@@ -114,6 +124,16 @@ export function validateButtons(buttons: readonly PanelButtonInput[]): string | 
     }
     if (!VALID_BUTTON_STYLES.includes(button.style)) {
       return `O botão "${label}" tem um estilo de cor inválido.`;
+    }
+    if (button.responseImageUrl) {
+      const error = validateImageUrl(button.responseImageUrl);
+      if (error)
+        return `Imagem da resposta do botão "${label}": ${error.charAt(0).toLowerCase()}${error.slice(1)}`;
+    }
+    if (button.responseColor) {
+      const error = validateColor(button.responseColor);
+      if (error)
+        return `Cor da resposta do botão "${label}": ${error.charAt(0).toLowerCase()}${error.slice(1)}`;
     }
   }
 
@@ -163,6 +183,8 @@ export function assignButtonIds(
       emoji: input.emoji,
       style: input.style,
       response: input.response,
+      responseImageUrl: input.responseImageUrl,
+      responseColor: input.responseColor,
       order: index
     };
   });

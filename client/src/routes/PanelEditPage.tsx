@@ -2,6 +2,7 @@ import type { PanelButtonInput, PanelConfig, UpdatePanelRequest } from "@dragons
 import {
   PANEL_LIMITS,
   validateButtons,
+  validateColor,
   validateDescription,
   validateImageUrl,
   validateTitle
@@ -18,6 +19,7 @@ import { DiscordPanelPreview } from "../discord-preview/DiscordPanelPreview";
 import { useApiData } from "../hooks/useApiData";
 import { ButtonEditorList } from "../panel-editor/ButtonEditorList";
 import { CharacterCounter } from "../panel-editor/CharacterCounter";
+import { ColorField } from "../panel-editor/ColorField";
 import { ConfirmDialog } from "../panel-editor/ConfirmDialog";
 import { ImageUrlField } from "../panel-editor/ImageUrlField";
 import { PublishPanelSection } from "../panel-editor/PublishPanelSection";
@@ -52,6 +54,7 @@ interface FormState {
   title: string;
   description: string;
   imageUrl: string;
+  color: string;
   buttons: LocalButton[];
 }
 
@@ -60,6 +63,7 @@ function toFormState(panel: PanelConfig): FormState {
     title: panel.title,
     description: panel.description,
     imageUrl: panel.imageUrl ?? "",
+    color: panel.color ?? "",
     buttons: [...panel.buttons]
       .sort((a, b) => a.order - b.order)
       .map((button) => ({
@@ -68,7 +72,9 @@ function toFormState(panel: PanelConfig): FormState {
         label: button.label,
         emoji: button.emoji,
         style: button.style,
-        response: button.response
+        response: button.response,
+        responseImageUrl: button.responseImageUrl,
+        responseColor: button.responseColor
       }))
   };
 }
@@ -79,7 +85,9 @@ function toButtonsInput(buttons: LocalButton[]): PanelButtonInput[] {
     label: button.label,
     emoji: button.emoji,
     style: button.style,
-    response: button.response
+    response: button.response,
+    responseImageUrl: button.responseImageUrl,
+    responseColor: button.responseColor
   }));
 }
 
@@ -112,11 +120,18 @@ function PanelEditorForm({ initialPanel }: { initialPanel: PanelConfig }) {
     form.description.length > 0 ? validateDescription(form.description) : "Obrigatório.";
   const imageUrl = form.imageUrl.trim();
   const imageUrlError = imageUrl.length > 0 ? validateImageUrl(imageUrl) : null;
+  const color = form.color.trim();
+  const colorError = color.length > 0 ? validateColor(color) : null;
   const buttonsInput = toButtonsInput(form.buttons);
   const buttonsError = validateButtons(buttonsInput);
 
   const canSave =
-    saveState !== "saving" && !titleError && !descriptionError && !imageUrlError && !buttonsError;
+    saveState !== "saving" &&
+    !titleError &&
+    !descriptionError &&
+    !imageUrlError &&
+    !colorError &&
+    !buttonsError;
 
   // Depois que um job de publicacao/sincronizacao chega em `completed`,
   // `publishedChannelId`/`publishedMessageId` do painel podem ter mudado no
@@ -144,6 +159,7 @@ function PanelEditorForm({ initialPanel }: { initialPanel: PanelConfig }) {
         title: form.title,
         description: form.description,
         imageUrl: imageUrl.length > 0 ? imageUrl : null,
+        color: color.length > 0 ? color : null,
         buttons: buttonsInput
       };
       const { panel: updated, syncQueued } = await updatePanel(saved.id, body);
@@ -227,12 +243,15 @@ function PanelEditorForm({ initialPanel }: { initialPanel: PanelConfig }) {
     title: form.title,
     description: form.description,
     imageUrl: imageUrl.length > 0 ? imageUrl : null,
+    color: color.length > 0 ? color : null,
     buttons: form.buttons.map((button, index) => ({
       id: button.id ?? button.key,
       label: button.label,
       emoji: button.emoji,
       style: button.style,
       response: button.response,
+      responseImageUrl: button.responseImageUrl,
+      responseColor: button.responseColor,
       order: index
     }))
   };
@@ -320,6 +339,13 @@ function PanelEditorForm({ initialPanel }: { initialPanel: PanelConfig }) {
             value={form.imageUrl}
             onChange={(next) => setForm((current) => ({ ...current, imageUrl: next }))}
             error={imageUrl.length > 0 ? imageUrlError : null}
+          />
+
+          <ColorField
+            label="Cor do painel (opcional)"
+            value={form.color}
+            onChange={(next) => setForm((current) => ({ ...current, color: next }))}
+            error={color.length > 0 ? colorError : null}
           />
 
           <div className="border-t border-line pt-5">

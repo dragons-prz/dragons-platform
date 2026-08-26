@@ -1,11 +1,13 @@
 import type { PanelButtonStyle } from "@dragons/shared";
-import { PANEL_LIMITS } from "@dragons/shared";
+import { HEX_COLOR_PATTERN, PANEL_LIMITS, validateColor, validateImageUrl } from "@dragons/shared";
 import { useId, useRef } from "react";
 import type { DragEvent } from "react";
 
 import { ArrowDownIcon, ArrowUpIcon, DragHandleIcon, TrashIcon } from "../components/icons";
 import { CharacterCounter } from "./CharacterCounter";
+import { ColorField } from "./ColorField";
 import { EmojiPicker } from "./EmojiPicker";
+import { ImageUrlField } from "./ImageUrlField";
 import type { LocalButton } from "./types";
 import { useCursorInsert } from "./useCursorInsert";
 import { ButtonStyleSelect } from "./ButtonStyleSelect";
@@ -183,6 +185,29 @@ export function ButtonEditor({
           onChange={(style: PanelButtonStyle) => onChange({ ...button, style })}
           idPrefix={fieldId}
         />
+      </div>
+
+      <div className="flex flex-col gap-3 border-t border-line pt-3 sm:flex-row sm:items-start sm:gap-4">
+        <div className="flex-1">
+          <ImageUrlField
+            label="Imagem da resposta (opcional)"
+            value={button.responseImageUrl ?? ""}
+            onChange={(next) => onChange({ ...button, responseImageUrl: next || null })}
+            error={button.responseImageUrl ? validateImageUrl(button.responseImageUrl) : null}
+          />
+        </div>
+        <div className="flex-1">
+          <ColorField
+            label="Cor da resposta (opcional)"
+            value={button.responseColor ?? ""}
+            onChange={(next) => onChange({ ...button, responseColor: next || null })}
+            error={
+              button.responseColor && !HEX_COLOR_PATTERN.test(button.responseColor)
+                ? validateColor(button.responseColor)
+                : null
+            }
+          />
+        </div>
       </div>
     </li>
   );

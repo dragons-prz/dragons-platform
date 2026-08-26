@@ -46,7 +46,9 @@ export function ButtonEditorList({
       label: "",
       emoji: null,
       style: "Secondary",
-      response: ""
+      response: "",
+      responseImageUrl: null,
+      responseColor: null
     };
     onChange([...buttons, next]);
   }

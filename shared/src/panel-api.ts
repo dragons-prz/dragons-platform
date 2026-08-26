@@ -27,6 +27,8 @@ export interface PanelButtonInput {
   emoji: string | null;
   style: PanelButtonStyle;
   response: string;
+  responseImageUrl: string | null;
+  responseColor: string | null;
 }
 
 /** Todos os campos sao opcionais — envie so o que quer alterar. `buttons`, quando enviado, substitui o array inteiro. */
@@ -34,6 +36,7 @@ export interface UpdatePanelRequest {
   title?: string;
   description?: string;
   imageUrl?: string | null;
+  color?: string | null;
   buttons?: PanelButtonInput[];
 }
 
