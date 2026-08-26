@@ -22,6 +22,8 @@ export interface DiscordRole {
   id: string;
   name: string;
   color: number;
+  /** Posicao na hierarquia da guild — maior = mais alto. Usado no health check da config. */
+  position: number;
   permissions: string;
 }
 

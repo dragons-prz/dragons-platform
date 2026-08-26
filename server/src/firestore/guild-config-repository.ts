@@ -44,6 +44,61 @@ export async function getGuildConfig(env: AppEnv, guildId: string): Promise<Guil
   return snapshot.data() as GuildConfig;
 }
 
+/** Campos de `guildConfigs/{guildId}` que o painel pode reescrever (subset de `GuildConfig`). */
+export interface GuildConfigUpdate {
+  recruiterRoleId?: string;
+  founderRoleId?: string;
+  memberRoleId?: string;
+  approvalChannelId?: string | null;
+  recruitmentAnnouncementChannelId?: string;
+  blacklistLogChannelId?: string;
+}
+
+const WRITABLE_KEYS = [
+  "recruiterRoleId",
+  "founderRoleId",
+  "memberRoleId",
+  "approvalChannelId",
+  "recruitmentAnnouncementChannelId",
+  "blacklistLogChannelId"
+] as const;
+
+/**
+ * Atualiza campos parciais de `guildConfigs/{guildId}`. Igual ao bot, so
+ * escreve as chaves enviadas e NUNCA cria o documento — ausencia de
+ * `guildConfigs/{guildId}` e erro (ver `getGuildConfig`). Nao mexe em
+ * campos fora de `WRITABLE_KEYS` (`guildId`, `hierarchySeeded`).
+ */
+export async function updateGuildConfig(
+  env: AppEnv,
+  guildId: string,
+  patch: GuildConfigUpdate
+): Promise<GuildConfig> {
+  ensureFirebaseApp(env);
+
+  const ref = getFirestore().collection("guildConfigs").doc(guildId);
+  const snapshot = await ref.get();
+  if (!snapshot.exists) {
+    throw new Error(
+      `Documento guildConfigs/${guildId} nao encontrado no Firestore. O bot precisa ter rodado ao menos uma vez nesta guild antes do painel.`
+    );
+  }
+
+  const update: Record<string, unknown> = {};
+  for (const key of WRITABLE_KEYS) {
+    if (patch[key] !== undefined) {
+      update[key] = patch[key];
+    }
+  }
+
+  if (Object.keys(update).length > 0) {
+    await ref.update(update);
+  }
+
+  const fresh = await ref.get();
+  return fresh.data() as GuildConfig;
+}
+
 /**
  * Busca o `founderRoleId` configurado para a guild no Firestore.
  * Usado pela autorizacao de login/reconferencia de cargos.
