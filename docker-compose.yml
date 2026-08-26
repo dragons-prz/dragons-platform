@@ -1,0 +1,13 @@
+services:
+  dragons-platform:
+    build: .
+    container_name: dragons-platform
+    restart: unless-stopped
+    env_file:
+      - .env
+    # Bound to loopback on purpose: the only way in from the internet is through
+    # the host nginx, which terminates TLS. Never publish this on 0.0.0.0.
+    ports:
+      - "127.0.0.1:3020:3000"
+    volumes:
+      - ./firebase-service-account.json:/app/firebase-service-account.json:ro

@@ -4,6 +4,7 @@ import Fastify from "fastify";
 import { registerAuthPlugin } from "./auth/plugin.js";
 import { registerAuthRoutes } from "./auth/routes.js";
 import { loadEnv } from "./config/env.js";
+import { registerStaticClient } from "./static.js";
 import { logger } from "./utils/logger.js";
 
 interface HealthResponse {
@@ -23,6 +24,9 @@ async function main(): Promise<void> {
   app.get<{ Reply: HealthResponse }>("/api/health", async () => {
     return { status: "ok" };
   });
+
+  // Depois das rotas de API: o fallback de SPA so deve pegar o que sobrar.
+  await registerStaticClient(app);
 
   try {
     await app.listen({ port: env.port, host: "0.0.0.0" });
