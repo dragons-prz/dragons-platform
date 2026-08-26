@@ -1,9 +1,12 @@
 import fastifyCookie from "@fastify/cookie";
 import Fastify from "fastify";
 
-import { registerAuthPlugin } from "./auth/plugin.js";
+import { createRequireAuth, registerAuthPlugin } from "./auth/plugin.js";
 import { registerAuthRoutes } from "./auth/routes.js";
 import { loadEnv } from "./config/env.js";
+import { registerConfigRoutes } from "./routes/config.js";
+import { registerGuildRoutes } from "./routes/guild.js";
+import { registerPanelRoutes } from "./routes/panels.js";
 import { registerStaticClient } from "./static.js";
 import { logger } from "./utils/logger.js";
 
@@ -23,6 +26,16 @@ async function main(): Promise<void> {
 
   app.get<{ Reply: HealthResponse }>("/api/health", async () => {
     return { status: "ok" };
+  });
+
+  // Escopo encapsulado: o preHandler requireAuth so se aplica as rotas
+  // registradas dentro deste plugin (paineis, config e recursos da guild),
+  // nunca as rotas publicas (health, auth) registradas fora dele.
+  await app.register(async (protectedApp) => {
+    protectedApp.addHook("preHandler", createRequireAuth(env));
+    registerPanelRoutes(protectedApp, env);
+    registerConfigRoutes(protectedApp, env);
+    registerGuildRoutes(protectedApp, env);
   });
 
   // Depois das rotas de API: o fallback de SPA so deve pegar o que sobrar.
