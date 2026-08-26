@@ -17,8 +17,13 @@ export const EDITABLE_ROLE_KEYS = ["recruiterRoleId", "founderRoleId", "memberRo
 /** Chaves de canal obrigatorias no `GuildConfig` (nunca nulas). */
 export const REQUIRED_CHANNEL_KEYS = [
   "recruitmentAnnouncementChannelId",
-  "blacklistLogChannelId"
+  "blacklistLogChannelId",
+  "memberVerificationChannelId",
+  "memberExitChannelId"
 ] as const;
+
+/** Chaves numericas editaveis (inteiro >= 1). */
+export const EDITABLE_NUMBER_KEYS = ["recruitmentPoints", "recruitmentCreditWindowHours"] as const;
 
 /**
  * Campos aceitos em `PATCH /api/config`. Todos opcionais — envie so o que
@@ -32,6 +37,10 @@ export interface UpdateGuildConfigRequest {
   approvalChannelId?: string | null;
   recruitmentAnnouncementChannelId?: string;
   blacklistLogChannelId?: string;
+  memberVerificationChannelId?: string;
+  memberExitChannelId?: string;
+  recruitmentPoints?: number;
+  recruitmentCreditWindowHours?: number;
 }
 
 /**
@@ -71,6 +80,15 @@ export function validateGuildConfigUpdate(patch: UpdateGuildConfigRequest): stri
       )
     ) {
       return 'O canal "approvalChannelId" precisa ser um id de canal valido do Discord ou nulo.';
+    }
+  }
+
+  for (const key of EDITABLE_NUMBER_KEYS) {
+    const value = patch[key];
+    if (value === undefined) continue;
+    touched = true;
+    if (typeof value !== "number" || !Number.isInteger(value) || value < 1) {
+      return `O parametro "${key}" precisa ser um numero inteiro maior ou igual a 1.`;
     }
   }
 

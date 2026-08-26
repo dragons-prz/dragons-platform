@@ -64,6 +64,11 @@ interface FormState {
   approvalChannelId: string;
   recruitmentAnnouncementChannelId: string;
   blacklistLogChannelId: string;
+  memberVerificationChannelId: string;
+  memberExitChannelId: string;
+  /** Mantidos como string (input controlado); convertidos para número no patch. */
+  recruitmentPoints: string;
+  recruitmentCreditWindowHours: string;
 }
 
 function toFormState(config: GuildConfig): FormState {
@@ -73,8 +78,18 @@ function toFormState(config: GuildConfig): FormState {
     memberRoleId: config.memberRoleId,
     approvalChannelId: config.approvalChannelId ?? "",
     recruitmentAnnouncementChannelId: config.recruitmentAnnouncementChannelId,
-    blacklistLogChannelId: config.blacklistLogChannelId
+    blacklistLogChannelId: config.blacklistLogChannelId,
+    memberVerificationChannelId: config.memberVerificationChannelId,
+    memberExitChannelId: config.memberExitChannelId,
+    recruitmentPoints: String(config.recruitmentPoints),
+    recruitmentCreditWindowHours: String(config.recruitmentCreditWindowHours)
   };
+}
+
+/** Inteiro >= 1? (mesma regra de `validateGuildConfigUpdate` no servidor.) */
+function isValidCount(value: string): boolean {
+  const parsed = Number(value);
+  return value.trim() !== "" && Number.isInteger(parsed) && parsed >= 1;
 }
 
 /** Monta o patch com apenas os campos que mudaram — mantém `config.updated` legível no log. */
@@ -91,6 +106,21 @@ function buildPatch(saved: FormState, form: FormState): UpdateGuildConfigRequest
   }
   if (form.blacklistLogChannelId !== saved.blacklistLogChannelId) {
     patch.blacklistLogChannelId = form.blacklistLogChannelId;
+  }
+  if (form.memberVerificationChannelId !== saved.memberVerificationChannelId) {
+    patch.memberVerificationChannelId = form.memberVerificationChannelId;
+  }
+  if (form.memberExitChannelId !== saved.memberExitChannelId) {
+    patch.memberExitChannelId = form.memberExitChannelId;
+  }
+  if (form.recruitmentPoints !== saved.recruitmentPoints && isValidCount(form.recruitmentPoints)) {
+    patch.recruitmentPoints = Number(form.recruitmentPoints);
+  }
+  if (
+    form.recruitmentCreditWindowHours !== saved.recruitmentCreditWindowHours &&
+    isValidCount(form.recruitmentCreditWindowHours)
+  ) {
+    patch.recruitmentCreditWindowHours = Number(form.recruitmentCreditWindowHours);
   }
   return patch;
 }
@@ -128,8 +158,12 @@ function SettingsForm({
     form.founderRoleId !== "" &&
     form.memberRoleId !== "" &&
     form.recruitmentAnnouncementChannelId !== "" &&
-    form.blacklistLogChannelId !== "";
-  const canSave = saveState !== "saving" && isDirty && requiredFilled;
+    form.blacklistLogChannelId !== "" &&
+    form.memberVerificationChannelId !== "" &&
+    form.memberExitChannelId !== "";
+  const numbersValid =
+    isValidCount(form.recruitmentPoints) && isValidCount(form.recruitmentCreditWindowHours);
+  const canSave = saveState !== "saving" && isDirty && requiredFilled && numbersValid;
 
   function set<K extends keyof FormState>(key: K, value: string) {
     setForm((current) => ({ ...current, [key]: value }));
@@ -166,8 +200,8 @@ function SettingsForm({
       <div>
         <h1 className="font-display text-2xl font-bold text-ink">Configuração</h1>
         <p className="mt-1 font-body text-sm text-ink-muted">
-          Cargos e canais que o bot Dragons usa neste servidor. As alterações valem para o bot assim
-          que são salvas — ele lê o mesmo Firestore.
+          Cargos, canais e parâmetros de recrutamento que o bot Dragons usa neste servidor. As
+          alterações valem para o bot assim que são salvas — ele lê o mesmo Firestore.
         </p>
       </div>
 
@@ -233,6 +267,39 @@ function SettingsForm({
           options={channelOptions}
           unknownLabel="Canal desconhecido"
         />
+        <SelectField
+          label="Fila de verificação"
+          hint="Recebe o card de cada novo membro aguardando verificação."
+          value={form.memberVerificationChannelId}
+          onChange={(value) => set("memberVerificationChannelId", value)}
+          options={channelOptions}
+          unknownLabel="Canal desconhecido"
+        />
+        <SelectField
+          label="Saída de membro"
+          hint="Recebe o card quando um membro sai do servidor."
+          value={form.memberExitChannelId}
+          onChange={(value) => set("memberExitChannelId", value)}
+          options={channelOptions}
+          unknownLabel="Canal desconhecido"
+        />
+      </section>
+
+      <section className="flex flex-col gap-5 rounded-xl border border-line bg-surface p-6">
+        <h2 className="font-display text-lg font-semibold text-ink">Parâmetros de recrutamento</h2>
+
+        <NumberField
+          label="Pontos por recrutamento"
+          hint="Pontos creditados ao recrutador quando um recrutamento é aprovado."
+          value={form.recruitmentPoints}
+          onChange={(value) => set("recruitmentPoints", value)}
+        />
+        <NumberField
+          label="Janela de crédito (horas)"
+          hint="Prazo após a entrada em que ainda cabe pedir crédito de recrutamento."
+          value={form.recruitmentCreditWindowHours}
+          onChange={(value) => set("recruitmentCreditWindowHours", value)}
+        />
       </section>
 
       <div className="flex flex-col gap-2">
@@ -250,7 +317,12 @@ function SettingsForm({
           ) : null}
           {isDirty && !requiredFilled ? (
             <span className="font-body text-xs text-danger">
-              Cargos e os dois canais obrigatórios precisam estar preenchidos.
+              Todos os cargos e canais obrigatórios precisam estar preenchidos.
+            </span>
+          ) : null}
+          {isDirty && requiredFilled && !numbersValid ? (
+            <span className="font-body text-xs text-danger">
+              Os parâmetros precisam ser números inteiros maiores ou iguais a 1.
             </span>
           ) : null}
         </div>
@@ -303,6 +375,39 @@ function SelectField({
         ))}
       </select>
       {hint ? <p className="font-body text-xs text-ink-muted">{hint}</p> : null}
+    </div>
+  );
+}
+
+function NumberField({
+  label,
+  hint,
+  value,
+  onChange
+}: {
+  label: string;
+  hint?: string;
+  value: string;
+  onChange: (value: string) => void;
+}) {
+  const invalid = value.trim() !== "" && !isValidCount(value);
+  return (
+    <div className="flex flex-col gap-1">
+      <label className="font-body text-xs font-medium text-ink-muted">{label}</label>
+      <input
+        type="number"
+        inputMode="numeric"
+        min={1}
+        step={1}
+        value={value}
+        onChange={(event) => onChange(event.target.value)}
+        className="w-32 rounded-lg border border-line bg-ground px-3 py-2 font-body text-sm text-ink outline-none focus-visible:border-ember"
+      />
+      {invalid ? (
+        <p className="font-body text-xs text-danger">Use um número inteiro maior ou igual a 1.</p>
+      ) : hint ? (
+        <p className="font-body text-xs text-ink-muted">{hint}</p>
+      ) : null}
     </div>
   );
 }

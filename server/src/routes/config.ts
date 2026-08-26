@@ -19,8 +19,8 @@ const LEVEL_RANK: Record<GuildConfigHealthLevel, number> = { ok: 0, warning: 1, 
 /**
  * Rotas da configuracao da guild (`guildConfigs/{guildId}`):
  * - `GET /api/config` — leitura do documento completo.
- * - `PATCH /api/config` — atualizacao parcial de cargos/canais ja existentes
- *   no `GuildConfig` (nao introduz campos novos — ver
+ * - `PATCH /api/config` — atualizacao parcial de cargos, canais e parametros
+ *   numericos do `GuildConfig` (ver
  *   `docs/specs/2026-08-26-configuracao-editavel.md`).
  * - `GET /api/config/health` — diagnostico da integracao (cargos/canais
  *   configurados e existentes, hierarquia do bot no Discord).
@@ -61,7 +61,12 @@ export function registerConfigRoutes(app: FastifyInstance, env: AppEnv): void {
         }
       }
 
-      for (const key of ["recruitmentAnnouncementChannelId", "blacklistLogChannelId"] as const) {
+      for (const key of [
+        "recruitmentAnnouncementChannelId",
+        "blacklistLogChannelId",
+        "memberVerificationChannelId",
+        "memberExitChannelId"
+      ] as const) {
         const value = patch[key];
         if (value !== undefined && !channelIds.has(value)) {
           throw new ValidationError(
@@ -162,6 +167,18 @@ async function computeGuildConfigHealth(env: AppEnv): Promise<GuildConfigHealthR
       id: "blacklistLogChannelId",
       channelId: config.blacklistLogChannelId,
       label: "Canal de log de blacklist",
+      required: true
+    },
+    {
+      id: "memberVerificationChannelId",
+      channelId: config.memberVerificationChannelId,
+      label: "Canal de fila de verificacao",
+      required: true
+    },
+    {
+      id: "memberExitChannelId",
+      channelId: config.memberExitChannelId,
+      label: "Canal de saida de membro",
       required: true
     },
     {
