@@ -1,0 +1,63 @@
+/* Archivo (titulos/labels), Source Sans 3 (corpo), JetBrains Mono (dados/codigo). */
+@import url("https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700;800&family=Source+Sans+3:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap");
+
+@import "tailwindcss";
+
+/*
+ * Design tokens do painel Dragons.
+ *
+ * Paleta derivada do Open Color (https://yeun.github.io/open-color/), a
+ * mesma paleta ja usada pelo bot nos embeds do Discord
+ * (dragonsbot/src/utils — cores de aprovacao, fila e blacklist). Mantendo
+ * os mesmos tons aqui o painel fica visualmente consistente com o que os
+ * founders/admins ja veem no servidor.
+ *
+ * Dark-first: o tema escuro e o padrao do produto. Os tokens abaixo ja sao
+ * os valores escuros; nao ha alternancia por prefers-color-scheme nesta
+ * fase porque o produto nao oferece tema claro ainda.
+ */
+:root {
+  --ember: #e03131; /* Open Color red 7 — identidade Dragons, acoes primarias */
+  --ok: #2f9e44; /* Open Color green 7 — igual ao embed de aprovacao do bot */
+  --warn: #f08c00; /* Open Color orange 7 — igual ao card "na fila" do bot */
+  --danger: #c92a2a; /* Open Color red 9 — igual ao embed de blacklist do bot */
+
+  --ground: #120f11; /* neutro escuro com vies quente */
+  --surface: #1b171a;
+  --surface-2: #241f23;
+  --line: #332c31;
+  --ink: #efebee;
+  --ink-muted: #a0959c;
+
+  color-scheme: dark;
+}
+
+/*
+ * Tokens do Tailwind v4 (gera as utilities bg-ember, text-ink, font-display
+ * etc.) apontando para as CSS custom properties acima — mantidas como
+ * fonte da verdade dos valores de cor/tipografia do produto.
+ */
+@theme {
+  --color-ember: var(--ember);
+  --color-ok: var(--ok);
+  --color-warn: var(--warn);
+  --color-danger: var(--danger);
+
+  --color-ground: var(--ground);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-line: var(--line);
+  --color-ink: var(--ink);
+  --color-ink-muted: var(--ink-muted);
+
+  --font-display: "Archivo", system-ui, sans-serif;
+  --font-body: "Source Sans 3", system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, monospace;
+}
+
+body {
+  margin: 0;
+  background: var(--ground);
+  color: var(--ink);
+  font-family: var(--font-body);
+}

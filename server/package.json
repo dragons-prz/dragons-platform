@@ -1,0 +1,25 @@
+{
+  "name": "@dragons/server",
+  "version": "0.1.0",
+  "private": true,
+  "description": "API Fastify do painel administrativo Dragons",
+  "type": "module",
+  "main": "dist/index.js",
+  "scripts": {
+    "dev": "tsx watch src/index.ts",
+    "build": "tsc -p tsconfig.json",
+    "start": "node dist/index.js",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "lint": "eslint ."
+  },
+  "dependencies": {
+    "@dragons/shared": "*",
+    "dotenv": "^16.4.7",
+    "fastify": "^5.12.1"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.7",
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.3"
+  }
+}
