@@ -1,4 +1,5 @@
-import type { PanelButtonStyle } from "./panel.js";
+import type { PanelButtonStyle, PanelConfig } from "./panel.js";
+import type { PanelJobStatus } from "./panel-job.js";
 
 /**
  * Contrato dos endpoints de escrita de paineis (`POST /api/panels`,
@@ -35,3 +36,30 @@ export interface UpdatePanelRequest {
   imageUrl?: string | null;
   buttons?: PanelButtonInput[];
 }
+
+/** Resposta de `PATCH /api/panels/:id` — alem do painel atualizado, indica se uma sincronizacao com o Discord foi enfileirada automaticamente. */
+export interface UpdatePanelResponse {
+  panel: PanelConfig;
+  syncQueued: boolean;
+}
+
+/** Corpo de `POST /api/panels/:id/publish` — publicacao inicial num canal escolhido pelo usuario. */
+export interface PublishPanelRequest {
+  channelId: string;
+}
+
+/** Resposta de `POST /api/panels/:id/publish`. */
+export interface PublishPanelResponse {
+  jobId: string;
+  status: PanelJobStatus;
+}
+
+/** Resposta de `GET /api/panels/:id/publish-status` — `null` quando o painel nunca teve um job de publicacao. */
+export type PanelPublishStatusResponse = {
+  status: PanelJobStatus;
+  messageId: string | null;
+  error: string | null;
+  channelId: string;
+  createdAt: string;
+  updatedAt: string;
+} | null;

@@ -30,4 +30,6 @@ export interface PanelConfig {
   buttons: PanelButtonConfig[];
   createdAt: string;
   updatedAt: string;
+  publishedChannelId?: string | null;
+  publishedMessageId?: string | null;
 }

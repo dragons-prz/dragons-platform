@@ -2,7 +2,11 @@ import type {
   CreatePanelRequest,
   PanelButtonConfig,
   PanelButtonInput,
-  UpdatePanelRequest
+  PanelPublishStatusResponse,
+  PublishPanelRequest,
+  PublishPanelResponse,
+  UpdatePanelRequest,
+  UpdatePanelResponse
 } from "@dragons/shared";
 import {
   assignButtonIds,
@@ -16,6 +20,7 @@ import type { FastifyInstance } from "fastify";
 
 import type { AppEnv } from "../config/env.js";
 import { ValidationError } from "../errors.js";
+import { createPanelJob, getLatestPanelJobForPanel } from "../firestore/panel-job-repository.js";
 import {
   createPanel,
   deletePanel,
@@ -30,9 +35,11 @@ import { respondError } from "./respond-error.js";
  * Rotas de leitura e escrita de paineis. O `requireAuth` (aplicado pelo
  * chamador) ja garante que so founders/admins autorizados chegam aqui.
  *
- * Publicacao no Discord NAO e feita aqui — isso e a fase 4 e depende de
- * mudancas no repositorio do bot. Estas rotas so leem/escrevem o documento
- * `panels/{guildId}_{id}` no Firestore, no mesmo formato que
+ * A publicacao efetiva no Discord (postar/editar a mensagem) e feita pelo
+ * worker `startPanelJobWorker` no bot (`dragonsbot`, ja em producao), que
+ * consome a colecao `panelJobs` a cada 5s. Este arquivo so enfileira jobs
+ * (`panel-job-repository.ts`) e le o documento `panels/{guildId}_{id}` no
+ * mesmo formato que
  * `dragonsbot/src/storage/firestore/FirestoreDragonsStore.ts` produz.
  */
 export function registerPanelRoutes(app: FastifyInstance, env: AppEnv): void {
@@ -144,12 +151,107 @@ export function registerPanelRoutes(app: FastifyInstance, env: AppEnv): void {
           panelId: id,
           userId: request.authSession?.id
         });
-        return reply.send(panel);
+
+        // Sincronizacao automatica: se o painel ja foi publicado (tem um
+        // canal registrado), qualquer edicao salva deve refletir sozinha no
+        // Discord, sem o usuario precisar clicar em nada — o worker do bot
+        // pega o job em ate 5s. Um painel NUNCA publicado (ou publicado
+        // antes de `publishedChannelId` existir, como `guia-recrutamento`)
+        // nao enfileira nada aqui: a primeira publicacao e uma decisao
+        // explicita do usuario (rota `/publish` abaixo), que escolhe o
+        // canal — nunca deduzida automaticamente.
+        let syncQueued = false;
+        if (panel.publishedChannelId) {
+          await createPanelJob(env, {
+            guildId: env.discordGuildId,
+            panelId: id,
+            channelId: panel.publishedChannelId,
+            requestedByUserId: request.authSession?.id ?? "unknown"
+          });
+          syncQueued = true;
+          logger.info("panel.sync_queued", {
+            guildId: env.discordGuildId,
+            panelId: id,
+            channelId: panel.publishedChannelId,
+            userId: request.authSession?.id
+          });
+        }
+
+        const response: UpdatePanelResponse = { panel, syncQueued };
+        return reply.send(response);
       } catch (error) {
         return respondError(reply, "panels.update_failed", error);
       }
     }
   );
+
+  app.post<{ Params: { id: string }; Body: Partial<PublishPanelRequest> }>(
+    "/api/panels/:id/publish",
+    async (request, reply) => {
+      try {
+        const id = request.params.id;
+        const channelId =
+          typeof request.body?.channelId === "string" ? request.body.channelId.trim() : "";
+
+        if (!channelId) {
+          throw new ValidationError("Selecione um canal para publicar o painel.");
+        }
+
+        const panel = await getPanel(env, env.discordGuildId, id);
+        if (!panel) {
+          return reply.code(404).send({ error: `Painel "${id}" nao encontrado.` });
+        }
+
+        if (panel.buttons.length === 0) {
+          throw new ValidationError("Adicione ao menos um botão antes de publicar.");
+        }
+
+        const job = await createPanelJob(env, {
+          guildId: env.discordGuildId,
+          panelId: id,
+          channelId,
+          requestedByUserId: request.authSession?.id ?? "unknown"
+        });
+        logger.info("panel.publish_queued", {
+          guildId: env.discordGuildId,
+          panelId: id,
+          channelId,
+          userId: request.authSession?.id
+        });
+
+        const response: PublishPanelResponse = { jobId: job.id, status: job.status };
+        return reply.code(202).send(response);
+      } catch (error) {
+        return respondError(reply, "panels.publish_failed", error);
+      }
+    }
+  );
+
+  app.get<{ Params: { id: string } }>("/api/panels/:id/publish-status", async (request, reply) => {
+    try {
+      const id = request.params.id;
+
+      const panel = await getPanel(env, env.discordGuildId, id);
+      if (!panel) {
+        return reply.code(404).send({ error: `Painel "${id}" nao encontrado.` });
+      }
+
+      const job = await getLatestPanelJobForPanel(env, env.discordGuildId, id);
+      const response: PanelPublishStatusResponse = job
+        ? {
+            status: job.status,
+            messageId: job.messageId,
+            error: job.error,
+            channelId: job.channelId,
+            createdAt: job.createdAt,
+            updatedAt: job.updatedAt
+          }
+        : null;
+      return reply.send(response);
+    } catch (error) {
+      return respondError(reply, "panels.publish_status_failed", error);
+    }
+  });
 
   app.delete<{ Params: { id: string } }>("/api/panels/:id", async (request, reply) => {
     try {
