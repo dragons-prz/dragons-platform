@@ -405,7 +405,7 @@ function PanelEditorForm({ initialPanel }: { initialPanel: PanelConfig }) {
           </div>
         </div>
 
-        <div className="flex flex-col gap-2">
+        <div className="sticky top-6 flex h-fit flex-col gap-2">
           <h2 className="font-display text-sm font-semibold text-ink-muted">
             Pré-visualização (como aparece no Discord)
           </h2>
