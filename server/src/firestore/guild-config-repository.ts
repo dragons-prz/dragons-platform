@@ -52,6 +52,10 @@ export interface GuildConfigUpdate {
   approvalChannelId?: string | null;
   recruitmentAnnouncementChannelId?: string;
   blacklistLogChannelId?: string;
+  memberVerificationChannelId?: string;
+  memberExitChannelId?: string;
+  recruitmentPoints?: number;
+  recruitmentCreditWindowHours?: number;
 }
 
 const WRITABLE_KEYS = [
@@ -60,7 +64,11 @@ const WRITABLE_KEYS = [
   "memberRoleId",
   "approvalChannelId",
   "recruitmentAnnouncementChannelId",
-  "blacklistLogChannelId"
+  "blacklistLogChannelId",
+  "memberVerificationChannelId",
+  "memberExitChannelId",
+  "recruitmentPoints",
+  "recruitmentCreditWindowHours"
 ] as const;
 
 /**

@@ -1,7 +1,7 @@
 # Configuração editável no painel
 
 Data: 2026-08-26
-Status: Fase A em implementação
+Status: Fase A entregue (PR #12). Fase B em implementação (par: dragonsbot#6 + dragons-platform).
 
 ## Contexto
 
@@ -56,23 +56,30 @@ Autorização: qualquer sessão autorizada (founder ou admin) pode editar —
 mesmo modelo que já vale para criar/publicar painéis. Restringir para
 admin-only é decisão da Fase D.
 
-### Fase B — trazer parâmetros hoje fixos no bot para o `GuildConfig`
+### Fase B — trazer parâmetros hoje fixos no bot para o `GuildConfig` — EM IMPLEMENTAÇÃO
 
-Muda a forma do `GuildConfig` → **exige PR coordenado nos dois repos** +
-avaliar script de migração (`dragonsbot/src/migrate-firestore-members.ts` é
-o padrão).
+Muda a forma do `GuildConfig` → **PR coordenado nos dois repos**
+(`dragonsbot#6` + branch `feat/config-parametros-bot` aqui).
 
-Campos candidatos:
+| Campo novo                     | Constante anterior no bot         | Default               |
+| ------------------------------ | --------------------------------- | --------------------- |
+| `memberVerificationChannelId`  | `MEMBER_VERIFICATION_CHANNEL_ID`  | `1534723901421256784` |
+| `memberExitChannelId`          | `MEMBER_EXIT_CHANNEL_ID`          | `1534735482460831884` |
+| `recruitmentPoints`            | `RECRUITMENT_POINTS`              | `8`                   |
+| `recruitmentCreditWindowHours` | `RECRUITMENT_CREDIT_WINDOW_HOURS` | `24`                  |
 
-| Campo novo                     | Constante atual no bot                 |
-| ------------------------------ | -------------------------------------- |
-| `memberVerificationChannelId`  | `MEMBER_VERIFICATION_CHANNEL_ID`       |
-| `memberExitChannelId`          | `MEMBER_EXIT_CHANNEL_ID`               |
-| `recruitmentPoints`            | `RECRUITMENT_POINTS` (8)               |
-| `recruitmentCreditWindowHours` | `RECRUITMENT_CREDIT_WINDOW_HOURS` (24) |
+**Sem script de migração:** a store do bot faz backfill-on-read em
+`getGuildConfig` (mesmo padrão já usado para
+`recruitmentAnnouncementChannelId` / `blacklistLogChannelId`) — a primeira
+leitura por guild preenche o campo ausente com o default. As constantes
+continuam no código, agora só como valor padrão.
 
-O bot passa a ler esses campos do `guildConfigs/{guildId}` com fallback para
-a constante quando ausente; o painel ganha os campos no formulário.
+Lado do painel: `guild-config.ts` espelha os 4 campos;
+`UpdateGuildConfigRequest` + `validateGuildConfigUpdate` ganham os 2 canais
+(snowflake) e os 2 números (inteiro ≥ 1); `PATCH /api/config` valida a
+existência dos canais na guild; o health check cobre os 2 canais novos;
+`SettingsPage` ganha 2 selects de canal e uma seção "Parâmetros de
+recrutamento" com 2 inputs numéricos.
 
 ### Fase C — editor de hierarquia de ranks
 
