@@ -3,26 +3,23 @@ import "dotenv/config";
 /**
  * Variaveis de ambiente do servidor.
  *
- * Fase 0 (scaffold): o servidor precisa subir sem nenhuma credencial real
- * configurada, entao apenas `PORT` e validado de forma estrita. As demais
- * chaves (Discord OAuth, sessao, Firebase) sao lidas de forma opcional por
- * enquanto e ficam `undefined` se ausentes.
- *
- * Quando as rotas de OAuth/Firestore forem implementadas, troque as
- * chamadas `optional(...)` correspondentes por `required(...)` (mesmo
- * padrao usado em `dragonsbot/src/config/env.ts`) para falhar cedo e com
- * mensagem clara caso a credencial esteja faltando.
+ * Fase 1 (autenticacao): as chaves de OAuth do Discord, o segredo de
+ * sessao e o caminho da service account do Firebase agora sao
+ * obrigatorias — o servidor falha cedo na subida se alguma faltar, com
+ * mensagem clara (mesmo padrao de `dragonsbot/src/config/env.ts`).
  */
 
 export interface AppEnv {
   port: number;
-  discordClientId?: string;
-  discordClientSecret?: string;
-  discordToken?: string;
-  discordGuildId?: string;
-  discordRedirectUri?: string;
-  sessionSecret?: string;
-  firebaseServiceAccountPath?: string;
+  discordClientId: string;
+  discordClientSecret: string;
+  discordToken: string;
+  discordGuildId: string;
+  discordRedirectUri: string;
+  sessionSecret: string;
+  firebaseServiceAccountPath: string;
+  clientOrigin: string;
+  nodeEnv: string;
 }
 
 function required(name: string): string {
@@ -48,16 +45,20 @@ export function loadEnv(): AppEnv {
 
   return {
     port,
-    discordClientId: optional("DISCORD_CLIENT_ID"),
-    discordClientSecret: optional("DISCORD_CLIENT_SECRET"),
-    discordToken: optional("DISCORD_TOKEN"),
-    discordGuildId: optional("DISCORD_GUILD_ID"),
-    discordRedirectUri: optional("DISCORD_REDIRECT_URI"),
-    sessionSecret: optional("SESSION_SECRET"),
-    firebaseServiceAccountPath: optional("FIREBASE_SERVICE_ACCOUNT_PATH")
+    discordClientId: required("DISCORD_CLIENT_ID"),
+    discordClientSecret: required("DISCORD_CLIENT_SECRET"),
+    discordToken: required("DISCORD_TOKEN"),
+    discordGuildId: required("DISCORD_GUILD_ID"),
+    discordRedirectUri: required("DISCORD_REDIRECT_URI"),
+    sessionSecret: required("SESSION_SECRET"),
+    firebaseServiceAccountPath: required("FIREBASE_SERVICE_ACCOUNT_PATH"),
+    // Origem do SPA para onde o fluxo OAuth deve redirecionar de volta
+    // apos o callback (o navegador navega ate o backend via
+    // DISCORD_REDIRECT_URI, depois precisa voltar para o frontend). Nao
+    // existia no .env.example da fase 0 — mantida opcional com o default
+    // do Vite dev server para nao quebrar quem ja tinha um .env sem essa
+    // chave.
+    clientOrigin: optional("CLIENT_ORIGIN") ?? "http://localhost:5173",
+    nodeEnv: optional("NODE_ENV") ?? "development"
   };
 }
-
-// Mantido para uso futuro (OAuth/Firestore) — evita import nao utilizado
-// sinalizar erro de lint enquanto nao ha chamador ainda.
-export { required };
