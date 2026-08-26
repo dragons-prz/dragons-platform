@@ -20,8 +20,25 @@ export interface DiscordGuild {
 
 export interface DiscordRole {
   id: string;
+  name: string;
+  color: number;
   permissions: string;
 }
+
+export interface DiscordChannel {
+  id: string;
+  name: string;
+  type: number;
+}
+
+export interface DiscordEmoji {
+  id: string;
+  name: string;
+  animated: boolean;
+}
+
+/** Tipos de canal de texto elegiveis para paineis/logs (texto e anuncio). */
+const TEXT_CHANNEL_TYPES = new Set([0, 5]);
 
 interface CacheEntry<T> {
   value: T;
@@ -36,6 +53,8 @@ interface CacheEntry<T> {
  */
 const guildCache = new Map<string, CacheEntry<DiscordGuild>>();
 const rolesCache = new Map<string, CacheEntry<DiscordRole[]>>();
+const channelsCache = new Map<string, CacheEntry<DiscordChannel[]>>();
+const emojisCache = new Map<string, CacheEntry<DiscordEmoji[]>>();
 
 function getCached<T>(cache: Map<string, CacheEntry<T>>, key: string): T | undefined {
   const entry = cache.get(key);
@@ -51,7 +70,7 @@ function setCached<T>(cache: Map<string, CacheEntry<T>>, key: string, value: T):
   cache.set(key, { value, expiresAt: Date.now() + GUILD_CACHE_TTL_MS });
 }
 
-class DiscordApiError extends Error {
+export class DiscordApiError extends Error {
   constructor(
     public readonly status: number,
     message: string
@@ -170,4 +189,44 @@ export async function getGuildRoles(env: AppEnv, guildId: string): Promise<Disco
   const roles = (await response.json()) as DiscordRole[];
   setCached(rolesCache, guildId, roles);
   return roles;
+}
+
+/**
+ * Busca os canais de texto/anuncio da guild (filtra os demais tipos —
+ * voz, categoria, forum etc.), cacheado ~60s.
+ */
+export async function getGuildChannels(env: AppEnv, guildId: string): Promise<DiscordChannel[]> {
+  const cached = getCached(channelsCache, guildId);
+  if (cached) return cached;
+
+  const response = await fetch(`${DISCORD_API_BASE}/guilds/${guildId}/channels`, {
+    headers: botHeaders(env)
+  });
+
+  if (!response.ok) {
+    throw new DiscordApiError(response.status, "Falha ao buscar canais da guild no Discord");
+  }
+
+  const allChannels = (await response.json()) as DiscordChannel[];
+  const channels = allChannels.filter((channel) => TEXT_CHANNEL_TYPES.has(channel.type));
+  setCached(channelsCache, guildId, channels);
+  return channels;
+}
+
+/** Busca os emojis customizados da guild, cacheado ~60s. */
+export async function getGuildEmojis(env: AppEnv, guildId: string): Promise<DiscordEmoji[]> {
+  const cached = getCached(emojisCache, guildId);
+  if (cached) return cached;
+
+  const response = await fetch(`${DISCORD_API_BASE}/guilds/${guildId}/emojis`, {
+    headers: botHeaders(env)
+  });
+
+  if (!response.ok) {
+    throw new DiscordApiError(response.status, "Falha ao buscar emojis da guild no Discord");
+  }
+
+  const emojis = (await response.json()) as DiscordEmoji[];
+  setCached(emojisCache, guildId, emojis);
+  return emojis;
 }
