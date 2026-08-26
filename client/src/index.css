@@ -29,6 +29,13 @@
   --ink: #efebee;
   --ink-muted: #a0959c;
 
+  /* Texto sobre preenchimentos solidos de ember/ok/warn/danger. --ink e
+     quase branco (luminancia alta) mas ainda assim nao atinge 4.5:1 contra
+     essas cores saturadas de brilho medio — branco puro atinge. Usado
+     apenas no texto de botoes/chips com fundo colorido, nunca em texto
+     sobre --ground/--surface (onde --ink ja cumpre o contraste). */
+  --on-accent: #ffffff;
+
   color-scheme: dark;
 }
 
@@ -49,6 +56,7 @@
   --color-line: var(--line);
   --color-ink: var(--ink);
   --color-ink-muted: var(--ink-muted);
+  --color-on-accent: var(--on-accent);
 
   --font-display: "Archivo", system-ui, sans-serif;
   --font-body: "Source Sans 3", system-ui, sans-serif;
@@ -60,4 +68,21 @@ body {
   background: var(--ground);
   color: var(--ink);
   font-family: var(--font-body);
+}
+
+/* Foco de teclado visivel em qualquer elemento interativo, em todo o app. */
+:focus-visible {
+  outline: 2px solid var(--ember);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }
