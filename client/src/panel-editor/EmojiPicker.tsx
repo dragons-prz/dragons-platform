@@ -38,7 +38,11 @@ export function EmojiPicker({
   const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    if (!open || state.status !== "idle") return;
+    // So busca ao abrir; se ja carregou, mantem o resultado. Nao depende de
+    // `state.status` para nao ficar preso em "loading" quando o StrictMode
+    // remonta o efeito (a primeira requisicao e abortada pelo cleanup e a
+    // segunda passada precisa refazer o fetch).
+    if (!open || state.status === "ready") return;
 
     setState({ status: "loading" });
     const controller = new AbortController();
@@ -51,7 +55,8 @@ export function EmojiPicker({
       });
 
     return () => controller.abort();
-  }, [open, state.status]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open]);
 
   useEffect(() => {
     if (!open) return;
