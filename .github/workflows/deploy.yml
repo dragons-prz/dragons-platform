@@ -7,7 +7,7 @@ on:
 
 concurrency:
   group: deploy-production
-  cancel-in-progress: false  # Never cancel a running deploy
+  cancel-in-progress: false # Never cancel a running deploy
 
 jobs:
   deploy:
