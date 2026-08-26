@@ -27,14 +27,33 @@ interface ErrorBody {
 /** GET autenticado com tratamento de erro consistente para toda a API do painel. */
 export async function apiGet<T>(path: string, signal?: AbortSignal): Promise<T> {
   const response = await fetch(path, { credentials: "include", signal });
+  return handleResponse<T>(response);
+}
 
+async function apiSend<T>(
+  path: string,
+  method: "POST" | "PATCH" | "DELETE",
+  body: unknown,
+  signal?: AbortSignal
+): Promise<T> {
+  const response = await fetch(path, {
+    method,
+    credentials: "include",
+    headers: body !== undefined ? { "Content-Type": "application/json" } : {},
+    body: body !== undefined ? JSON.stringify(body) : undefined,
+    signal
+  });
+  return handleResponse<T>(response);
+}
+
+async function handleResponse<T>(response: Response): Promise<T> {
   if (response.status === 401) {
     throw new ApiUnauthenticatedError();
   }
 
   if (!response.ok) {
     const body = (await response.json().catch(() => null)) as ErrorBody | null;
-    const message = body?.error ?? `Falha ao carregar dados (HTTP ${response.status})`;
+    const message = body?.error ?? `Falha ao salvar dados (HTTP ${response.status})`;
 
     if (response.status === 404) {
       throw new ApiNotFoundError(message);
@@ -43,5 +62,24 @@ export async function apiGet<T>(path: string, signal?: AbortSignal): Promise<T> 
     throw new ApiError(message);
   }
 
+  if (response.status === 204) {
+    return undefined as T;
+  }
+
   return (await response.json()) as T;
+}
+
+/** POST autenticado — usado para criar recursos. */
+export function apiPost<T>(path: string, body: unknown, signal?: AbortSignal): Promise<T> {
+  return apiSend<T>(path, "POST", body, signal);
+}
+
+/** PATCH autenticado — usado para atualizar campos parciais de um recurso. */
+export function apiPatch<T>(path: string, body: unknown, signal?: AbortSignal): Promise<T> {
+  return apiSend<T>(path, "PATCH", body, signal);
+}
+
+/** DELETE autenticado. */
+export function apiDelete(path: string, signal?: AbortSignal): Promise<void> {
+  return apiSend<void>(path, "DELETE", undefined, signal);
 }

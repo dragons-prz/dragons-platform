@@ -28,14 +28,12 @@ export function PanelsPage() {
           </p>
         </div>
 
-        <button
-          type="button"
-          disabled
-          title="Criação de painéis chega em uma próxima fase"
-          className="cursor-not-allowed rounded-lg border border-line px-4 py-2 font-display text-sm font-semibold text-ink-muted opacity-60"
+        <Link
+          to="/paineis/novo"
+          className="rounded-lg bg-ember px-4 py-2 font-display text-sm font-semibold text-on-accent transition-colors hover:bg-ember/85"
         >
-          Criar painel (em breve)
-        </button>
+          Criar painel
+        </Link>
       </div>
 
       {panels.length === 0 ? (
@@ -43,9 +41,8 @@ export function PanelsPage() {
           <PanelsIcon className="h-8 w-8 text-ink-muted" />
           <h2 className="font-display text-lg font-semibold text-ink">Nenhum painel ainda</h2>
           <p className="max-w-md font-body text-sm text-ink-muted">
-            Este servidor ainda não tem painéis criados pelo bot (comando{" "}
-            <code className="font-mono text-xs text-ink">/painel criar</code>). A criação pelo
-            painel web chega em uma próxima fase.
+            Este servidor ainda não tem painéis. Crie um pelo botão acima ou pelo comando{" "}
+            <code className="font-mono text-xs text-ink">/painel criar</code> no Discord.
           </p>
         </div>
       ) : (

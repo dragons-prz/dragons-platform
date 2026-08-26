@@ -129,6 +129,132 @@ export function BackIcon(props: IconProps) {
   );
 }
 
+export function TrashIcon(props: IconProps) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={1.75}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+      {...props}
+    >
+      <path d="M4 7h16" />
+      <path d="M9 7V4.5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1V7" />
+      <path d="M6 7l1 13a2 2 0 0 0 2 1.9h6a2 2 0 0 0 2-1.9L18 7" />
+      <path d="M10 11v6" />
+      <path d="M14 11v6" />
+    </svg>
+  );
+}
+
+export function PlusIcon(props: IconProps) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={1.75}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+      {...props}
+    >
+      <path d="M12 5v14" />
+      <path d="M5 12h14" />
+    </svg>
+  );
+}
+
+export function ArrowUpIcon(props: IconProps) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={1.75}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+      {...props}
+    >
+      <path d="M12 19V5" />
+      <path d="m5 12 7-7 7 7" />
+    </svg>
+  );
+}
+
+export function ArrowDownIcon(props: IconProps) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={1.75}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+      {...props}
+    >
+      <path d="M12 5v14" />
+      <path d="m5 12 7 7 7-7" />
+    </svg>
+  );
+}
+
+export function DragHandleIcon(props: IconProps) {
+  return (
+    <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" {...props}>
+      <circle cx="9" cy="6" r="1.5" />
+      <circle cx="15" cy="6" r="1.5" />
+      <circle cx="9" cy="12" r="1.5" />
+      <circle cx="15" cy="12" r="1.5" />
+      <circle cx="9" cy="18" r="1.5" />
+      <circle cx="15" cy="18" r="1.5" />
+    </svg>
+  );
+}
+
+export function CloseIcon(props: IconProps) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={1.75}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+      {...props}
+    >
+      <path d="M6 6l12 12" />
+      <path d="M18 6 6 18" />
+    </svg>
+  );
+}
+
+export function EmojiIcon(props: IconProps) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={1.75}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+      {...props}
+    >
+      <circle cx="12" cy="12" r="9" />
+      <path d="M8.5 10.5h.01" />
+      <path d="M15.5 10.5h.01" />
+      <path d="M8 14.5a4.5 4.5 0 0 0 8 0" />
+    </svg>
+  );
+}
+
 export function SpinnerIcon(props: IconProps) {
   return (
     <svg

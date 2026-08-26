@@ -4,7 +4,8 @@ import { AuthProvider } from "./context/AuthContext";
 import { AccessDeniedPage } from "./routes/AccessDeniedPage";
 import { AppLayout } from "./routes/AppLayout";
 import { LoginPage } from "./routes/LoginPage";
-import { PanelDetailPage } from "./routes/PanelDetailPage";
+import { PanelCreatePage } from "./routes/PanelCreatePage";
+import { PanelEditPage } from "./routes/PanelEditPage";
 import { PanelsPage } from "./routes/PanelsPage";
 import { ProtectedRoute } from "./routes/ProtectedRoute";
 import { SettingsPage } from "./routes/SettingsPage";
@@ -21,7 +22,8 @@ export function App() {
             <Route element={<AppLayout />}>
               <Route index element={<Navigate to="/paineis" replace />} />
               <Route path="paineis" element={<PanelsPage />} />
-              <Route path="paineis/:id" element={<PanelDetailPage />} />
+              <Route path="paineis/novo" element={<PanelCreatePage />} />
+              <Route path="paineis/:id" element={<PanelEditPage />} />
               <Route path="configuracao" element={<SettingsPage />} />
             </Route>
           </Route>
