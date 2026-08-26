@@ -11,7 +11,7 @@ import { useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 
 import { ApiError } from "../api/client";
-import { deletePanel, fetchPanel, updatePanel } from "../api/panels";
+import { deletePanel, fetchPanel, publishPanel, updatePanel } from "../api/panels";
 import { BackIcon } from "../components/icons";
 import { ErrorScreen, LoadingScreen } from "../components/StatusScreen";
 import { DiscordPanelPreview } from "../discord-preview/DiscordPanelPreview";
@@ -20,8 +20,10 @@ import { ButtonEditorList } from "../panel-editor/ButtonEditorList";
 import { CharacterCounter } from "../panel-editor/CharacterCounter";
 import { ConfirmDialog } from "../panel-editor/ConfirmDialog";
 import { ImageUrlField } from "../panel-editor/ImageUrlField";
+import { PublishPanelSection } from "../panel-editor/PublishPanelSection";
 import type { LocalButton } from "../panel-editor/types";
 import { useUnsavedChangesWarning } from "../panel-editor/useUnsavedChangesWarning";
+import { usePublishStatusPolling } from "../panel-editor/usePublishStatusPolling";
 
 export function PanelEditPage() {
   const { id } = useParams<{ id: string }>();
@@ -94,6 +96,13 @@ function PanelEditorForm({ initialPanel }: { initialPanel: PanelConfig }) {
   const [deleteState, setDeleteState] = useState<"idle" | "deleting" | "error">("idle");
   const [deleteError, setDeleteError] = useState<string | null>(null);
 
+  const polling = usePublishStatusPolling(initialPanel.id);
+  const [pollingContext, setPollingContext] = useState<"publish" | "sync">("sync");
+  const [publishing, setPublishing] = useState(false);
+  const [publishError, setPublishError] = useState<string | null>(null);
+  const [syncing, setSyncing] = useState(false);
+  const [syncNowError, setSyncNowError] = useState<string | null>(null);
+
   const savedForm = toFormState(saved);
   const isDirty = JSON.stringify(form) !== JSON.stringify(savedForm);
   useUnsavedChangesWarning(isDirty);
@@ -109,6 +118,22 @@ function PanelEditorForm({ initialPanel }: { initialPanel: PanelConfig }) {
   const canSave =
     saveState !== "saving" && !titleError && !descriptionError && !imageUrlError && !buttonsError;
 
+  // Depois que um job de publicacao/sincronizacao chega em `completed`,
+  // `publishedChannelId`/`publishedMessageId` do painel podem ter mudado no
+  // Firestore (primeira publicacao) — busca o painel de novo para refletir
+  // isso na UI. Campos do formulario (title/description/etc.) nao sao
+  // tocados, entao nao ha risco de sobrescrever edicoes locais nao salvas.
+  async function refreshPublishedFields() {
+    try {
+      const fresh = await fetchPanel(saved.id);
+      setSaved(fresh);
+    } catch {
+      // Feedback de sincronizacao ja apareceu via polling; falha aqui so
+      // significa que o badge de "publicado em #canal" fica desatualizado
+      // ate a proxima visita a pagina — nao vale interromper o usuario.
+    }
+  }
+
   async function handleSave() {
     if (!canSave) return;
 
@@ -121,7 +146,7 @@ function PanelEditorForm({ initialPanel }: { initialPanel: PanelConfig }) {
         imageUrl: imageUrl.length > 0 ? imageUrl : null,
         buttons: buttonsInput
       };
-      const updated = await updatePanel(saved.id, body);
+      const { panel: updated, syncQueued } = await updatePanel(saved.id, body);
       setSaved(updated);
       setForm(toFormState(updated));
       setSaveState("saved");
@@ -129,9 +154,50 @@ function PanelEditorForm({ initialPanel }: { initialPanel: PanelConfig }) {
         () => setSaveState((current) => (current === "saved" ? "idle" : current)),
         2500
       );
+      if (syncQueued) {
+        setPollingContext("sync");
+        polling.start(() => void refreshPublishedFields());
+      }
     } catch (error) {
       setSaveState("error");
       setSaveError(error instanceof ApiError ? error.message : "Não foi possível salvar o painel.");
+    }
+  }
+
+  async function handlePublish(channelId: string) {
+    if (!channelId || publishing) return;
+    setPublishing(true);
+    setPublishError(null);
+    try {
+      await publishPanel(saved.id, { channelId });
+      setPollingContext("publish");
+      polling.start(() => void refreshPublishedFields());
+    } catch (error) {
+      setPublishError(
+        error instanceof ApiError ? error.message : "Não foi possível publicar o painel."
+      );
+    } finally {
+      setPublishing(false);
+    }
+  }
+
+  async function handleSyncNow() {
+    if (syncing) return;
+    setSyncing(true);
+    setSyncNowError(null);
+    try {
+      const { panel: updated, syncQueued } = await updatePanel(saved.id, {});
+      setSaved(updated);
+      if (syncQueued) {
+        setPollingContext("sync");
+        polling.start(() => void refreshPublishedFields());
+      }
+    } catch (error) {
+      setSyncNowError(
+        error instanceof ApiError ? error.message : "Não foi possível sincronizar o painel."
+      );
+    } finally {
+      setSyncing(false);
     }
   }
 
@@ -281,10 +347,33 @@ function PanelEditorForm({ initialPanel }: { initialPanel: PanelConfig }) {
               {isDirty && saveState !== "saving" ? (
                 <span className="font-body text-xs text-warn">Alterações não salvas</span>
               ) : null}
+              {!isDirty && pollingContext === "sync" && polling.state.phase === "polling" ? (
+                <span className="font-body text-xs text-ink-muted">
+                  Salvo. Atualizando no Discord...
+                </span>
+              ) : null}
             </div>
             {saveError ? (
               <p role="alert" className="font-body text-sm text-danger">
                 {saveError}
+              </p>
+            ) : null}
+          </div>
+
+          <div className="border-t border-line pt-5">
+            <PublishPanelSection
+              panel={saved}
+              pollingState={polling.state}
+              pollingContext={pollingContext}
+              publishing={publishing}
+              publishError={publishError}
+              onPublish={(channelId) => void handlePublish(channelId)}
+              syncing={syncing}
+              onSyncNow={() => void handleSyncNow()}
+            />
+            {syncNowError ? (
+              <p role="alert" className="mt-2 font-body text-sm text-danger">
+                {syncNowError}
               </p>
             ) : null}
           </div>
@@ -295,9 +384,15 @@ function PanelEditorForm({ initialPanel }: { initialPanel: PanelConfig }) {
             Pré-visualização (como aparece no Discord)
           </h2>
           <DiscordPanelPreview panel={previewPanel} />
-          <p className="font-body text-xs text-ink-muted">
-            A publicação no Discord chega em uma próxima fase — por enquanto isto é só uma prévia.
-          </p>
+          {saved.publishedChannelId ? (
+            <p className="font-body text-xs text-ink-muted">
+              Salvar altera a mensagem publicada no Discord automaticamente.
+            </p>
+          ) : (
+            <p className="font-body text-xs text-ink-muted">
+              Isto ainda é só uma prévia — publique na seção acima para postar no Discord.
+            </p>
+          )}
         </div>
       </div>
 
