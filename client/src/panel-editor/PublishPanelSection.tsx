@@ -96,17 +96,40 @@ export function PublishPanelSection({
     return () => controller.abort();
   }, []);
 
+  const [isChangingChannel, setIsChangingChannel] = useState(false);
+
+  useEffect(() => {
+    if (panel.publishedChannelId && pollingState.phase === "completed") {
+      setIsChangingChannel(false);
+    }
+  }, [panel.publishedChannelId, pollingState.phase]);
+
   const isBusy = publishing || pollingState.phase === "polling";
 
-  if (!panel.publishedChannelId) {
+  if (!panel.publishedChannelId || isChangingChannel) {
     return (
       <div className="flex flex-col gap-3 rounded-xl border border-line bg-surface p-6">
-        <div>
-          <h2 className="font-display text-sm font-semibold text-ink">Publicar no Discord</h2>
-          <p className="mt-1 font-body text-xs text-ink-muted">
-            Este painel ainda não foi publicado por aqui. Escolha um canal e publique — depois
-            disso, as próximas edições sincronizam sozinhas.
-          </p>
+        <div className="flex items-start justify-between">
+          <div>
+            <h2 className="font-display text-sm font-semibold text-ink">
+              {isChangingChannel ? "Alterar canal de publicação" : "Publicar no Discord"}
+            </h2>
+            <p className="mt-1 font-body text-xs text-ink-muted">
+              {isChangingChannel
+                ? "Escolha um novo canal. Uma nova mensagem será enviada e as futuras edições passarão a ser sincronizadas nela."
+                : "Este painel ainda não foi publicado por aqui. Escolha um canal e publique — depois disso, as próximas edições sincronizam sozinhas."}
+            </p>
+          </div>
+          {isChangingChannel ? (
+            <button
+              type="button"
+              onClick={() => setIsChangingChannel(false)}
+              disabled={isBusy}
+              className="text-xs font-medium text-ink-muted hover:text-ink disabled:opacity-40"
+            >
+              Cancelar
+            </button>
+          ) : null}
         </div>
 
         {channelsError ? (
@@ -170,6 +193,14 @@ export function PublishPanelSection({
           className="w-fit rounded-lg border border-line px-4 py-2 font-display text-sm font-medium text-ink transition-colors hover:border-ember disabled:cursor-not-allowed disabled:opacity-40"
         >
           {syncing ? "Sincronizando..." : "Sincronizar agora"}
+        </button>
+        <button
+          type="button"
+          onClick={() => setIsChangingChannel(true)}
+          disabled={syncing || pollingState.phase === "polling"}
+          className="w-fit rounded-lg border border-line px-4 py-2 font-display text-sm font-medium text-ink transition-colors hover:border-ember disabled:cursor-not-allowed disabled:opacity-40"
+        >
+          Alterar canal
         </button>
       </div>
       <PollingStatus state={pollingState} context={pollingContext} />
