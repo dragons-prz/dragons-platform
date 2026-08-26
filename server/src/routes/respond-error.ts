@@ -1,16 +1,24 @@
 import type { FastifyReply } from "fastify";
 
-import { DiscordApiError } from "../discord/discord-client.js";
 import { logger } from "../utils/logger.js";
+
+/** Erro com um `status` HTTP explicito (ex.: `ValidationError`, `NotFoundError`, `DiscordApiError`). */
+interface HttpError extends Error {
+  status: number;
+}
+
+function isHttpError(error: unknown): error is HttpError {
+  return error instanceof Error && typeof (error as { status?: unknown }).status === "number";
+}
 
 /**
  * Responde um erro em JSON com mensagem legivel, nunca stack trace —
- * usado por todas as rotas de leitura desta fase. Loga o detalhe completo
- * no servidor (com stack) mas devolve so a mensagem ao cliente.
+ * usado por todas as rotas desta fase. Loga o detalhe completo no
+ * servidor (com stack) mas devolve so a mensagem ao cliente.
  *
- * Erros vindos da API do Discord repassam o status HTTP original quando
- * fizer sentido (ex.: 403 se o bot perdeu acesso); qualquer outro erro
- * (Firestore, bug interno) vira 500 generico.
+ * Erros que carregam seu proprio `status` HTTP (validacao, "nao
+ * encontrado", API do Discord) repassam esse status quando esta na faixa
+ * 4xx; qualquer outro erro (Firestore, bug interno) vira 500 generico.
  */
 export async function respondError(
   reply: FastifyReply,
@@ -20,9 +28,7 @@ export async function respondError(
   logger.error(event, error);
 
   const status =
-    error instanceof DiscordApiError && error.status >= 400 && error.status < 500
-      ? error.status
-      : 500;
+    isHttpError(error) && error.status >= 400 && error.status < 500 ? error.status : 500;
   const message = error instanceof Error ? error.message : "Erro inesperado no servidor.";
   await reply.code(status).send({ error: message });
 }
