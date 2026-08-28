@@ -68,7 +68,7 @@ export function SupportCategoryCreatePage() {
 
       <form
         onSubmit={(event) => void handleSubmit(event)}
-        className="flex flex-col gap-5 rounded-xl border border-line bg-surface p-6"
+        className="flex flex-col gap-5 rounded-xl border border-line bg-surface p-4 sm:p-6"
       >
         <div>
           <h1 className="font-display text-2xl font-bold text-ink">Nova categoria de suporte</h1>

@@ -88,7 +88,7 @@ export function PanelCreatePage() {
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,34rem)]">
         <form
           onSubmit={(event) => void handleSubmit(event)}
-          className="flex flex-col gap-5 rounded-xl border border-line bg-surface p-6"
+          className="flex flex-col gap-5 rounded-xl border border-line bg-surface p-4 sm:p-6"
         >
           <div>
             <h1 className="font-display text-2xl font-bold text-ink">Criar painel</h1>
@@ -175,7 +175,7 @@ export function PanelCreatePage() {
           </button>
         </form>
 
-        <div className="sticky top-6 flex h-fit flex-col gap-2">
+        <div className="flex h-fit flex-col gap-2 lg:sticky lg:top-6">
           <h2 className="font-display text-sm font-semibold text-ink-muted">
             Pré-visualização (como aparece no Discord)
           </h2>

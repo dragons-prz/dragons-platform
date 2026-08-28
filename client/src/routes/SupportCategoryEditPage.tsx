@@ -160,7 +160,7 @@ function CategoryForm({
 
   return (
     <div className="flex max-w-2xl flex-col gap-6">
-      <div className="flex items-center justify-between gap-4">
+      <div className="flex flex-wrap items-center justify-between gap-3">
         <Link
           to="/suporte"
           className="flex w-fit items-center gap-2 font-display text-sm font-medium text-ink-muted transition-colors hover:text-ink"
@@ -177,7 +177,7 @@ function CategoryForm({
         </button>
       </div>
 
-      <div className="flex flex-col gap-5 rounded-xl border border-line bg-surface p-6">
+      <div className="flex flex-col gap-5 rounded-xl border border-line bg-surface p-4 sm:p-6">
         <div>
           <span className="font-mono text-xs text-ink-muted">{saved.id}</span>
           <h1 className="mt-1 font-display text-2xl font-bold text-ink">Editar categoria</h1>
