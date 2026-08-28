@@ -85,7 +85,7 @@ export function PanelCreatePage() {
         Voltar para painéis
       </Link>
 
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,26rem)]">
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,34rem)]">
         <form
           onSubmit={(event) => void handleSubmit(event)}
           className="flex flex-col gap-5 rounded-xl border border-line bg-surface p-6"
