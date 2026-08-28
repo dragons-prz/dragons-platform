@@ -13,6 +13,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { createPanel } from "../api/panels";
 import { ApiError } from "../api/client";
 import { BackIcon } from "../components/icons";
+import { usePresenceLocation } from "../context/PresenceContext";
 import { CharacterCounter } from "../panel-editor/CharacterCounter";
 import { DiscordPanelPreview } from "../discord-preview/DiscordPanelPreview";
 
@@ -31,6 +32,7 @@ const EMPTY_PANEL_FOR_PREVIEW: Omit<PanelConfig, "id" | "title" | "description">
 export function PanelCreatePage() {
   const navigate = useNavigate();
   const fieldId = useId();
+  usePresenceLocation("panel-new");
 
   const [id, setId] = useState("");
   const [title, setTitle] = useState("");

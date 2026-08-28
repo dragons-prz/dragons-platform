@@ -17,10 +17,12 @@ import {
   updateGuildConfig
 } from "../api/guild";
 import { ErrorScreen, LoadingScreen } from "../components/StatusScreen";
+import { usePresenceLocation } from "../context/PresenceContext";
 import type { ApiDataState } from "../hooks/useApiData";
 import { useApiData } from "../hooks/useApiData";
 
 export function SettingsPage() {
+  usePresenceLocation("settings");
   const configState = useApiData(fetchGuildConfig, []);
   const rolesState = useApiData(fetchGuildRoles, []);
   const channelsState = useApiData(fetchGuildChannels, []);

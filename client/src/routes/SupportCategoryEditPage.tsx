@@ -4,7 +4,11 @@ import type {
   SupportCategoryConfig,
   UpdateSupportCategoryRequest
 } from "@dragons/shared";
-import { SUPPORT_CATEGORY_LIMITS, validateSupportCategoryUpdate } from "@dragons/shared";
+import {
+  formatSupportCategoryLocation,
+  SUPPORT_CATEGORY_LIMITS,
+  validateSupportCategoryUpdate
+} from "@dragons/shared";
 import type { ReactNode } from "react";
 import { useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
@@ -18,12 +22,14 @@ import {
 } from "../api/support-categories";
 import { BackIcon } from "../components/icons";
 import { ErrorScreen, LoadingScreen } from "../components/StatusScreen";
+import { usePresenceLocation } from "../context/PresenceContext";
 import { CharacterCounter } from "../panel-editor/CharacterCounter";
 import { ConfirmDialog } from "../panel-editor/ConfirmDialog";
 import { useApiData } from "../hooks/useApiData";
 
 export function SupportCategoryEditPage() {
   const { id } = useParams<{ id: string }>();
+  usePresenceLocation(id ? formatSupportCategoryLocation(id) : "support-categories");
   const categoryState = useApiData(
     (signal) => {
       if (!id) return Promise.reject(new Error("Id da categoria ausente na URL."));
