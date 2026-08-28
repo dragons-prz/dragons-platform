@@ -1,10 +1,11 @@
+import type { SupportCategoryConfig } from "@dragons/shared";
 import { PANEL_LIMITS } from "@dragons/shared";
 import { useRef, useState } from "react";
 import type { DragEvent } from "react";
 
 import { PlusIcon } from "../components/icons";
 import { ButtonEditor } from "./ButtonEditor";
-import { createLocalButtonId } from "./types";
+import { createLocalButtonId, emptyReplyAction } from "./types";
 import type { LocalButton } from "./types";
 
 /**
@@ -15,9 +16,11 @@ import type { LocalButton } from "./types";
  */
 export function ButtonEditorList({
   buttons,
+  categories,
   onChange
 }: {
   buttons: LocalButton[];
+  categories: SupportCategoryConfig[];
   onChange: (next: LocalButton[]) => void;
 }) {
   const [dragIndex, setDragIndex] = useState<number | null>(null);
@@ -48,7 +51,8 @@ export function ButtonEditorList({
       style: "Secondary",
       response: "",
       responseImageUrl: null,
-      responseColor: null
+      responseColor: null,
+      action: emptyReplyAction()
     };
     onChange([...buttons, next]);
   }
@@ -101,6 +105,7 @@ export function ButtonEditorList({
               button={button}
               index={index}
               total={buttons.length}
+              categories={categories}
               onChange={(next) => updateButton(index, next)}
               onRemove={() => removeButton(index)}
               onMoveUp={() => moveButton(index, index - 1)}

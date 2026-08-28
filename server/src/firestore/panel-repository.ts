@@ -1,4 +1,5 @@
-import type { PanelButtonConfig, PanelConfig } from "@dragons/shared";
+import type { PanelButtonConfig, PanelConfig, PanelSelectConfig } from "@dragons/shared";
+import { resolveButtonAction } from "@dragons/shared";
 import { getFirestore } from "firebase-admin/firestore";
 
 import type { AppEnv } from "../config/env.js";
@@ -22,17 +23,41 @@ import { ensureFirebaseApp } from "./guild-config-repository.js";
  * `undefined` em vez de `null` para paineis/botoes salvos antes desta
  * mudanca.
  */
+function normalizeSelect(select: PanelSelectConfig | null | undefined): PanelSelectConfig | null {
+  if (!select) return null;
+  return {
+    placeholder: select.placeholder,
+    options: [...(select.options ?? [])]
+      .sort((a, b) => a.order - b.order)
+      .map((option) => ({
+        id: option.id,
+        label: option.label,
+        description: option.description ?? null,
+        emoji: option.emoji ?? null,
+        action:
+          option.action ??
+          ({ type: "reply", response: "", responseImageUrl: null, responseColor: null } as const),
+        order: option.order
+      }))
+  };
+}
+
 function normalizePanel(panel: PanelConfig): PanelConfig {
   return {
     ...panel,
     color: panel.color ?? null,
+    kind: panel.kind ?? "buttons",
     buttons: [...panel.buttons]
       .sort((a, b) => a.order - b.order)
       .map((button) => ({
         ...button,
         responseImageUrl: button.responseImageUrl ?? null,
-        responseColor: button.responseColor ?? null
-      }))
+        responseColor: button.responseColor ?? null,
+        // Backfill on read: documentos antigos nao tem `action` — monta uma
+        // acao `reply` a partir dos campos legados (mesma regra do bot).
+        action: resolveButtonAction(button)
+      })),
+    select: normalizeSelect(panel.select)
   };
 }
 
@@ -96,7 +121,9 @@ export async function createPanel(
     description,
     imageUrl: null,
     color: null,
+    kind: "buttons",
     buttons: [],
+    select: null,
     createdAt: now,
     updatedAt: now
   };
@@ -109,7 +136,9 @@ export interface PanelUpdate {
   description?: string;
   imageUrl?: string | null;
   color?: string | null;
+  kind?: PanelConfig["kind"];
   buttons?: PanelButtonConfig[];
+  select?: PanelSelectConfig | null;
 }
 
 /** Atualiza campos parciais de um painel existente. Sempre atualiza `updatedAt`; preserva `createdAt` (nunca reescrito). */
@@ -133,7 +162,9 @@ export async function updatePanel(
   if (patch.description !== undefined) update.description = patch.description;
   if (patch.imageUrl !== undefined) update.imageUrl = patch.imageUrl;
   if (patch.color !== undefined) update.color = patch.color;
+  if (patch.kind !== undefined) update.kind = patch.kind;
   if (patch.buttons !== undefined) update.buttons = patch.buttons;
+  if (patch.select !== undefined) update.select = patch.select;
 
   await ref.update(update);
   const updated = await ref.get();

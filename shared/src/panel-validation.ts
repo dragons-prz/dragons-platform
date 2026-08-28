@@ -1,5 +1,12 @@
-import type { PanelButtonConfig, PanelButtonStyle } from "./panel.js";
-import type { PanelButtonInput } from "./panel-api.js";
+import { PANEL_ACTIONS } from "./panel-actions.js";
+import type {
+  PanelActionConfig,
+  PanelButtonConfig,
+  PanelButtonStyle,
+  PanelSelectConfig,
+  PanelSelectOption
+} from "./panel.js";
+import type { PanelButtonInput, PanelSelectInput, PanelSelectOptionInput } from "./panel-api.js";
 
 /**
  * Limites reais impostos pelo Discord para embeds e botoes. Violar estes
@@ -18,6 +25,14 @@ export const PANEL_LIMITS = {
 export const PANEL_ID_PATTERN = /^[a-z0-9-]{1,40}$/;
 
 export const HEX_COLOR_PATTERN = /^#[0-9a-fA-F]{6}$/;
+
+/** Limites do Discord para um menu de selecao (string select). */
+export const SELECT_LIMITS = {
+  PLACEHOLDER_MAX: 150,
+  MAX_OPTIONS: 25,
+  OPTION_LABEL_MAX: 100,
+  OPTION_DESCRIPTION_MAX: 100
+} as const;
 
 const VALID_BUTTON_STYLES: readonly PanelButtonStyle[] = [
   "Primary",
@@ -102,6 +117,70 @@ export function validateColor(value: string): string | null {
   return null;
 }
 
+/**
+ * Resolve a acao efetiva de um botao/opcao: quando `action` esta ausente
+ * (documento antigo ou input legado), monta uma acao `reply` a partir dos
+ * campos legados. MESMA regra do `mapPanelButton` no bot.
+ */
+export function resolveButtonAction(input: {
+  action?: PanelActionConfig;
+  response: string;
+  responseImageUrl: string | null;
+  responseColor: string | null;
+}): PanelActionConfig {
+  if (input.action) return input.action;
+  return {
+    type: "reply",
+    response: input.response,
+    responseImageUrl: input.responseImageUrl,
+    responseColor: input.responseColor
+  };
+}
+
+/**
+ * Valida uma `PanelActionConfig`. NAO checa se uma categoria de suporte
+ * referenciada existe de fato — isso e feito no servidor, que tem a lista.
+ * `label` identifica o item (botao/opcao) na mensagem de erro.
+ */
+export function validateAction(action: PanelActionConfig, label: string): string | null {
+  if (action.type === "reply") {
+    if (!action.response.trim()) {
+      return `${label}: a resposta não pode ficar vazia.`;
+    }
+    if (action.response.length > PANEL_LIMITS.BUTTON_RESPONSE_MAX) {
+      return `${label}: a resposta não pode ultrapassar ${PANEL_LIMITS.BUTTON_RESPONSE_MAX} caracteres (atual: ${action.response.length}).`;
+    }
+    if (action.responseImageUrl) {
+      const error = validateImageUrl(action.responseImageUrl);
+      if (error)
+        return `${label} — imagem da resposta: ${error.charAt(0).toLowerCase()}${error.slice(1)}`;
+    }
+    if (action.responseColor) {
+      const error = validateColor(action.responseColor);
+      if (error)
+        return `${label} — cor da resposta: ${error.charAt(0).toLowerCase()}${error.slice(1)}`;
+    }
+    return null;
+  }
+
+  if (action.type === "run") {
+    const spec = PANEL_ACTIONS.find((entry) => entry.id === action.actionId);
+    if (!spec) {
+      return `${label}: ação "${action.actionId}" desconhecida.`;
+    }
+    for (const param of spec.params) {
+      if (!param.required) continue;
+      const value = action.params?.[param.key];
+      if (typeof value !== "string" || !value.trim()) {
+        return `${label}: o parâmetro "${param.label}" é obrigatório.`;
+      }
+    }
+    return null;
+  }
+
+  return `${label}: tipo de ação inválido.`;
+}
+
 /** Valida o array completo de botoes de um painel (limite de quantidade + cada campo). */
 export function validateButtons(buttons: readonly PanelButtonInput[]): string | null {
   if (buttons.length > PANEL_LIMITS.MAX_BUTTONS) {
@@ -116,25 +195,44 @@ export function validateButtons(buttons: readonly PanelButtonInput[]): string | 
     if (button.label.length > PANEL_LIMITS.BUTTON_LABEL_MAX) {
       return `O texto do botão "${label.slice(0, 24)}" não pode ultrapassar ${PANEL_LIMITS.BUTTON_LABEL_MAX} caracteres (atual: ${button.label.length}).`;
     }
-    if (!button.response.trim()) {
-      return `O botão "${label}" precisa de uma resposta.`;
-    }
-    if (button.response.length > PANEL_LIMITS.BUTTON_RESPONSE_MAX) {
-      return `A resposta do botão "${label}" não pode ultrapassar ${PANEL_LIMITS.BUTTON_RESPONSE_MAX} caracteres (atual: ${button.response.length}).`;
-    }
     if (!VALID_BUTTON_STYLES.includes(button.style)) {
       return `O botão "${label}" tem um estilo de cor inválido.`;
     }
-    if (button.responseImageUrl) {
-      const error = validateImageUrl(button.responseImageUrl);
-      if (error)
-        return `Imagem da resposta do botão "${label}": ${error.charAt(0).toLowerCase()}${error.slice(1)}`;
+    const actionError = validateAction(resolveButtonAction(button), `Botão "${label}"`);
+    if (actionError) return actionError;
+  }
+
+  return null;
+}
+
+/** Valida o dropdown de um painel do tipo `select`. */
+export function validateSelect(select: PanelSelectInput): string | null {
+  if (typeof select.placeholder !== "string" || !select.placeholder.trim()) {
+    return "O texto de instrução do dropdown não pode ficar vazio.";
+  }
+  if (select.placeholder.length > SELECT_LIMITS.PLACEHOLDER_MAX) {
+    return `O texto de instrução do dropdown não pode ultrapassar ${SELECT_LIMITS.PLACEHOLDER_MAX} caracteres.`;
+  }
+  if (!Array.isArray(select.options) || select.options.length === 0) {
+    return "O dropdown precisa de ao menos uma opção.";
+  }
+  if (select.options.length > SELECT_LIMITS.MAX_OPTIONS) {
+    return `O dropdown pode ter no máximo ${SELECT_LIMITS.MAX_OPTIONS} opções.`;
+  }
+
+  for (const option of select.options) {
+    const label = option.label.trim();
+    if (!label) {
+      return "Toda opção do dropdown precisa de um texto (label).";
     }
-    if (button.responseColor) {
-      const error = validateColor(button.responseColor);
-      if (error)
-        return `Cor da resposta do botão "${label}": ${error.charAt(0).toLowerCase()}${error.slice(1)}`;
+    if (option.label.length > SELECT_LIMITS.OPTION_LABEL_MAX) {
+      return `O texto da opção "${label.slice(0, 24)}" não pode ultrapassar ${SELECT_LIMITS.OPTION_LABEL_MAX} caracteres.`;
     }
+    if (option.description && option.description.length > SELECT_LIMITS.OPTION_DESCRIPTION_MAX) {
+      return `A descrição da opção "${label}" não pode ultrapassar ${SELECT_LIMITS.OPTION_DESCRIPTION_MAX} caracteres.`;
+    }
+    const actionError = validateAction(option.action, `Opção "${label}"`);
+    if (actionError) return actionError;
   }
 
   return null;
@@ -177,15 +275,67 @@ export function assignButtonIds(
     }
 
     usedIds.add(id);
+    const action = resolveButtonAction(input);
     return {
       id,
       label: input.label,
       emoji: input.emoji,
       style: input.style,
-      response: input.response,
-      responseImageUrl: input.responseImageUrl,
-      responseColor: input.responseColor,
+      // Campos legados mantidos em sincronia com a acao `reply` para
+      // documentos lidos por codigo antigo; para acao `run` ficam vazios.
+      response: action.type === "reply" ? action.response : "",
+      responseImageUrl: action.type === "reply" ? action.responseImageUrl : null,
+      responseColor: action.type === "reply" ? action.responseColor : null,
+      action,
       order: index
     };
   });
+}
+
+/**
+ * Mesma regra de `assignButtonIds`, para as opcoes do dropdown. O id da
+ * opcao vira o `value` do select publicado no Discord — se mudasse ao
+ * editar o label, a mensagem publicada pararia de casar a opcao escolhida.
+ */
+export function assignSelectOptionIds(
+  existingOptions: readonly PanelSelectOption[],
+  inputs: readonly PanelSelectOptionInput[]
+): PanelSelectOption[] {
+  const existingIds = new Set(existingOptions.map((option) => option.id));
+  const usedIds = new Set<string>();
+
+  return inputs.map((input, index) => {
+    let id = input.id && existingIds.has(input.id) && !usedIds.has(input.id) ? input.id : undefined;
+
+    if (!id) {
+      const base = slugify(input.label) || "opcao";
+      id = base;
+      let suffix = 2;
+      while (usedIds.has(id)) {
+        id = `${base}-${suffix}`;
+        suffix += 1;
+      }
+    }
+
+    usedIds.add(id);
+    return {
+      id,
+      label: input.label,
+      description: input.description,
+      emoji: input.emoji,
+      action: input.action,
+      order: index
+    };
+  });
+}
+
+/** Resolve os ids finais do dropdown inteiro (placeholder + opcoes). */
+export function assignSelectIds(
+  existing: PanelSelectConfig | null,
+  input: PanelSelectInput
+): PanelSelectConfig {
+  return {
+    placeholder: input.placeholder,
+    options: assignSelectOptionIds(existing?.options ?? [], input.options)
+  };
 }

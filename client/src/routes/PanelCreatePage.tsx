@@ -20,7 +20,9 @@ const EMPTY_PANEL_FOR_PREVIEW: Omit<PanelConfig, "id" | "title" | "description">
   guildId: "",
   imageUrl: null,
   color: null,
+  kind: "buttons",
   buttons: [],
+  select: null,
   createdAt: "",
   updatedAt: ""
 };

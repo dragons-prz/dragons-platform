@@ -1,18 +1,27 @@
-import type { PanelButtonInput, PanelConfig, UpdatePanelRequest } from "@dragons/shared";
+import type {
+  PanelButtonInput,
+  PanelConfig,
+  PanelKind,
+  PanelSelectInput,
+  SupportCategoryConfig,
+  UpdatePanelRequest
+} from "@dragons/shared";
 import {
   PANEL_LIMITS,
   validateButtons,
   validateColor,
   validateDescription,
   validateImageUrl,
+  validateSelect,
   validateTitle
 } from "@dragons/shared";
-import type { MouseEvent } from "react";
+import type { MouseEvent, ReactNode } from "react";
 import { useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 
 import { ApiError } from "../api/client";
 import { deletePanel, fetchPanel, publishPanel, updatePanel } from "../api/panels";
+import { fetchSupportCategories } from "../api/support-categories";
 import { BackIcon } from "../components/icons";
 import { ErrorScreen, LoadingScreen } from "../components/StatusScreen";
 import { DiscordPanelPreview } from "../discord-preview/DiscordPanelPreview";
@@ -23,9 +32,13 @@ import { ColorField } from "../panel-editor/ColorField";
 import { ConfirmDialog } from "../panel-editor/ConfirmDialog";
 import { ImageUrlField } from "../panel-editor/ImageUrlField";
 import { PublishPanelSection } from "../panel-editor/PublishPanelSection";
-import type { LocalButton } from "../panel-editor/types";
+import { SelectOptionEditorList } from "../panel-editor/SelectOptionEditorList";
+import { createLocalButtonId } from "../panel-editor/types";
+import type { LocalButton, LocalSelectOption } from "../panel-editor/types";
 import { useUnsavedChangesWarning } from "../panel-editor/useUnsavedChangesWarning";
 import { usePublishStatusPolling } from "../panel-editor/usePublishStatusPolling";
+
+const DEFAULT_PLACEHOLDER = "Selecione uma opção!";
 
 export function PanelEditPage() {
   const { id } = useParams<{ id: string }>();
@@ -47,7 +60,14 @@ export function PanelEditPage() {
 
   // `key` forca remontar o formulario (e resetar todo o estado local nao
   // salvo) se o usuario navegar diretamente entre dois paineis diferentes.
-  return <PanelEditorForm key={state.data.id} initialPanel={state.data} />;
+  return <PanelEditGate key={state.data.id} initialPanel={state.data} />;
+}
+
+/** Carrega as categorias de suporte (para o editor de acao) antes do formulario. */
+function PanelEditGate({ initialPanel }: { initialPanel: PanelConfig }) {
+  const categoriesState = useApiData(fetchSupportCategories, []);
+  const categories = categoriesState.status === "ready" ? categoriesState.data : [];
+  return <PanelEditorForm initialPanel={initialPanel} categories={categories} />;
 }
 
 interface FormState {
@@ -55,7 +75,10 @@ interface FormState {
   description: string;
   imageUrl: string;
   color: string;
+  kind: PanelKind;
   buttons: LocalButton[];
+  placeholder: string;
+  selectOptions: LocalSelectOption[];
 }
 
 function toFormState(panel: PanelConfig): FormState {
@@ -64,6 +87,7 @@ function toFormState(panel: PanelConfig): FormState {
     description: panel.description,
     imageUrl: panel.imageUrl ?? "",
     color: panel.color ?? "",
+    kind: panel.kind ?? "buttons",
     buttons: [...panel.buttons]
       .sort((a, b) => a.order - b.order)
       .map((button) => ({
@@ -74,7 +98,19 @@ function toFormState(panel: PanelConfig): FormState {
         style: button.style,
         response: button.response,
         responseImageUrl: button.responseImageUrl,
-        responseColor: button.responseColor
+        responseColor: button.responseColor,
+        action: button.action
+      })),
+    placeholder: panel.select?.placeholder ?? DEFAULT_PLACEHOLDER,
+    selectOptions: [...(panel.select?.options ?? [])]
+      .sort((a, b) => a.order - b.order)
+      .map((option) => ({
+        key: option.id,
+        id: option.id,
+        label: option.label,
+        description: option.description,
+        emoji: option.emoji,
+        action: option.action
       }))
   };
 }
@@ -87,13 +123,33 @@ function toButtonsInput(buttons: LocalButton[]): PanelButtonInput[] {
     style: button.style,
     response: button.response,
     responseImageUrl: button.responseImageUrl,
-    responseColor: button.responseColor
+    responseColor: button.responseColor,
+    action: button.action
   }));
+}
+
+function toSelectInput(form: FormState): PanelSelectInput {
+  return {
+    placeholder: form.placeholder,
+    options: form.selectOptions.map((option) => ({
+      id: option.id,
+      label: option.label,
+      description: option.description,
+      emoji: option.emoji,
+      action: option.action
+    }))
+  };
 }
 
 type SaveState = "idle" | "saving" | "saved" | "error";
 
-function PanelEditorForm({ initialPanel }: { initialPanel: PanelConfig }) {
+function PanelEditorForm({
+  initialPanel,
+  categories
+}: {
+  initialPanel: PanelConfig;
+  categories: SupportCategoryConfig[];
+}) {
   const navigate = useNavigate();
 
   const [saved, setSaved] = useState(initialPanel);
@@ -123,7 +179,9 @@ function PanelEditorForm({ initialPanel }: { initialPanel: PanelConfig }) {
   const color = form.color.trim();
   const colorError = color.length > 0 ? validateColor(color) : null;
   const buttonsInput = toButtonsInput(form.buttons);
-  const buttonsError = validateButtons(buttonsInput);
+  const selectInput = toSelectInput(form);
+  const buttonsError = form.kind === "buttons" ? validateButtons(buttonsInput) : null;
+  const selectError = form.kind === "select" ? validateSelect(selectInput) : null;
 
   const canSave =
     saveState !== "saving" &&
@@ -131,7 +189,8 @@ function PanelEditorForm({ initialPanel }: { initialPanel: PanelConfig }) {
     !descriptionError &&
     !imageUrlError &&
     !colorError &&
-    !buttonsError;
+    !buttonsError &&
+    !selectError;
 
   // Depois que um job de publicacao/sincronizacao chega em `completed`,
   // `publishedChannelId`/`publishedMessageId` do painel podem ter mudado no
@@ -160,7 +219,9 @@ function PanelEditorForm({ initialPanel }: { initialPanel: PanelConfig }) {
         description: form.description,
         imageUrl: imageUrl.length > 0 ? imageUrl : null,
         color: color.length > 0 ? color : null,
-        buttons: buttonsInput
+        kind: form.kind,
+        buttons: buttonsInput,
+        select: form.kind === "select" ? selectInput : null
       };
       const { panel: updated, syncQueued } = await updatePanel(saved.id, body);
       setSaved(updated);
@@ -244,6 +305,7 @@ function PanelEditorForm({ initialPanel }: { initialPanel: PanelConfig }) {
     description: form.description,
     imageUrl: imageUrl.length > 0 ? imageUrl : null,
     color: color.length > 0 ? color : null,
+    kind: form.kind,
     buttons: form.buttons.map((button, index) => ({
       id: button.id ?? button.key,
       label: button.label,
@@ -252,8 +314,23 @@ function PanelEditorForm({ initialPanel }: { initialPanel: PanelConfig }) {
       response: button.response,
       responseImageUrl: button.responseImageUrl,
       responseColor: button.responseColor,
+      action: button.action,
       order: index
-    }))
+    })),
+    select:
+      form.kind === "select"
+        ? {
+            placeholder: form.placeholder,
+            options: form.selectOptions.map((option, index) => ({
+              id: option.id ?? option.key,
+              label: option.label,
+              description: option.description,
+              emoji: option.emoji,
+              action: option.action,
+              order: index
+            }))
+          }
+        : null
   };
 
   const saveLabel =
@@ -348,16 +425,78 @@ function PanelEditorForm({ initialPanel }: { initialPanel: PanelConfig }) {
             error={color.length > 0 ? colorError : null}
           />
 
+          <div className="flex flex-col gap-2 border-t border-line pt-5">
+            <span className="font-body text-xs font-medium text-ink-muted">Tipo de painel</span>
+            <div className="flex flex-wrap gap-2">
+              <KindChip
+                active={form.kind === "buttons"}
+                onClick={() => setForm((current) => ({ ...current, kind: "buttons" }))}
+              >
+                Botões
+              </KindChip>
+              <KindChip
+                active={form.kind === "select"}
+                onClick={() =>
+                  setForm((current) => ({
+                    ...current,
+                    kind: "select",
+                    selectOptions:
+                      current.selectOptions.length > 0
+                        ? current.selectOptions
+                        : current.buttons.map((button) => ({
+                            key: createLocalButtonId(),
+                            label: button.label,
+                            description: null,
+                            emoji: button.emoji,
+                            action: button.action
+                          }))
+                  }))
+                }
+              >
+                Dropdown
+              </KindChip>
+            </div>
+            <p className="font-body text-xs text-ink-muted">
+              {form.kind === "select"
+                ? "Um único menu suspenso no lugar das linhas de botões. Cada opção dispara uma ação."
+                : "Até 25 botões em linhas de 5. Cada botão dispara uma ação."}
+            </p>
+          </div>
+
           <div className="border-t border-line pt-5">
-            <ButtonEditorList
-              buttons={form.buttons}
-              onChange={(next) => setForm((current) => ({ ...current, buttons: next }))}
-            />
-            {buttonsError ? (
-              <p role="alert" className="mt-2 font-body text-xs text-danger">
-                {buttonsError}
-              </p>
-            ) : null}
+            {form.kind === "select" ? (
+              <>
+                <SelectOptionEditorList
+                  placeholder={form.placeholder}
+                  options={form.selectOptions}
+                  categories={categories}
+                  onPlaceholderChange={(next) =>
+                    setForm((current) => ({ ...current, placeholder: next }))
+                  }
+                  onOptionsChange={(next) =>
+                    setForm((current) => ({ ...current, selectOptions: next }))
+                  }
+                />
+                {selectError ? (
+                  <p role="alert" className="mt-2 font-body text-xs text-danger">
+                    {selectError}
+                  </p>
+                ) : null}
+              </>
+            ) : (
+              <>
+                <ButtonEditorList
+                  buttons={form.buttons}
+                  categories={categories}
+                  onChange={(next) => setForm((current) => ({ ...current, buttons: next }))}
+                />
+                {buttonsError ? (
+                  <p role="alert" className="mt-2 font-body text-xs text-danger">
+                    {buttonsError}
+                  </p>
+                ) : null}
+              </>
+            )}
           </div>
 
           <div className="flex flex-col gap-2 border-t border-line pt-5">
@@ -439,5 +578,30 @@ function PanelEditorForm({ initialPanel }: { initialPanel: PanelConfig }) {
         </p>
       ) : null}
     </div>
+  );
+}
+
+function KindChip({
+  active,
+  onClick,
+  children
+}: {
+  active: boolean;
+  onClick: () => void;
+  children: ReactNode;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-pressed={active}
+      className={`rounded-lg border px-3 py-1.5 font-display text-xs font-semibold transition-colors ${
+        active
+          ? "border-ember bg-ember/10 text-ember"
+          : "border-line text-ink-muted hover:border-ember/60 hover:text-ink"
+      }`}
+    >
+      {children}
+    </button>
   );
 }
