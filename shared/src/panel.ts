@@ -12,15 +12,58 @@
 
 export type PanelButtonStyle = "Primary" | "Secondary" | "Success" | "Danger";
 
+/**
+ * Tipo do painel: `buttons` (linhas de botoes, o formato historico) ou
+ * `select` (um unico dropdown no lugar dos botoes). Documentos antigos nao
+ * tem o campo — o mapeamento trata ausencia como `"buttons"`.
+ */
+export type PanelKind = "buttons" | "select";
+
+export interface PanelReplyAction {
+  type: "reply";
+  response: string;
+  responseImageUrl: string | null;
+  responseColor: string | null;
+}
+
+export interface PanelRunAction {
+  type: "run";
+  actionId: string;
+  params: Record<string, string>;
+}
+
+/**
+ * Acao disparada quando um botao/opcao do painel e acionado. `reply`
+ * responde com um embed efemero (comportamento historico); `run` dispara
+ * uma acao registrada no bot (ver `PANEL_ACTIONS` em `panel-actions.ts`).
+ */
+export type PanelActionConfig = PanelReplyAction | PanelRunAction;
+
 export interface PanelButtonConfig {
   id: string;
   label: string;
   emoji: string | null;
   style: PanelButtonStyle;
+  /** Campos legados: quando o documento nao tem `action`, ela e montada a partir deles. */
   response: string;
   responseImageUrl: string | null;
   responseColor: string | null;
+  action: PanelActionConfig;
   order: number;
+}
+
+export interface PanelSelectOption {
+  id: string;
+  label: string;
+  description: string | null;
+  emoji: string | null;
+  action: PanelActionConfig;
+  order: number;
+}
+
+export interface PanelSelectConfig {
+  placeholder: string;
+  options: PanelSelectOption[];
 }
 
 export interface PanelConfig {
@@ -30,7 +73,10 @@ export interface PanelConfig {
   description: string;
   imageUrl: string | null;
   color: string | null;
+  kind: PanelKind;
   buttons: PanelButtonConfig[];
+  /** Preenchido apenas quando `kind === "select"`; `null` caso contrario. */
+  select: PanelSelectConfig | null;
   createdAt: string;
   updatedAt: string;
   publishedChannelId?: string | null;

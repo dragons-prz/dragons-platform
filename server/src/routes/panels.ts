@@ -1,8 +1,11 @@
 import type {
   CreatePanelRequest,
+  PanelActionConfig,
   PanelButtonConfig,
   PanelButtonInput,
+  PanelKind,
   PanelPublishStatusResponse,
+  PanelSelectConfig,
   PublishPanelRequest,
   PublishPanelResponse,
   UpdatePanelRequest,
@@ -10,11 +13,14 @@ import type {
 } from "@dragons/shared";
 import {
   assignButtonIds,
+  assignSelectIds,
+  resolveButtonAction,
   validateButtons,
   validateColor,
   validateDescription,
   validateImageUrl,
   validatePanelId,
+  validateSelect,
   validateTitle
 } from "@dragons/shared";
 import type { FastifyInstance } from "fastify";
@@ -29,6 +35,7 @@ import {
   listPanels,
   updatePanel
 } from "../firestore/panel-repository.js";
+import { getSupportCategory } from "../firestore/support-category-repository.js";
 import { logger } from "../utils/logger.js";
 import { respondError } from "./respond-error.js";
 
@@ -117,7 +124,9 @@ export function registerPanelRoutes(app: FastifyInstance, env: AppEnv): void {
           description?: string;
           imageUrl?: string | null;
           color?: string | null;
+          kind?: PanelKind;
           buttons?: PanelButtonConfig[];
+          select?: PanelSelectConfig | null;
         } = {};
 
         if (body.title !== undefined) {
@@ -148,12 +157,47 @@ export function registerPanelRoutes(app: FastifyInstance, env: AppEnv): void {
           patch.color = body.color;
         }
 
+        if (body.kind !== undefined) {
+          if (body.kind !== "buttons" && body.kind !== "select") {
+            throw new ValidationError('O tipo do painel precisa ser "buttons" ou "select".');
+          }
+          patch.kind = body.kind;
+        }
+
         if (body.buttons !== undefined) {
           const buttons: PanelButtonInput[] = body.buttons;
           const buttonsError = validateButtons(buttons);
           if (buttonsError) throw new ValidationError(buttonsError);
           patch.buttons = assignButtonIds(existing.buttons, buttons);
         }
+
+        if (body.select !== undefined) {
+          if (body.select === null) {
+            patch.select = null;
+          } else {
+            const selectError = validateSelect(body.select);
+            if (selectError) throw new ValidationError(selectError);
+            patch.select = assignSelectIds(existing.select, body.select);
+          }
+        }
+
+        // Consistencia entre `kind` e o conteudo (usa o valor final apos o
+        // patch, nao so o que veio no body).
+        const finalKind = patch.kind ?? existing.kind;
+        const finalSelect = patch.select !== undefined ? patch.select : existing.select;
+        const finalButtons = patch.buttons ?? existing.buttons;
+        if (finalKind === "select" && (!finalSelect || finalSelect.options.length === 0)) {
+          throw new ValidationError(
+            "Um painel do tipo dropdown precisa de ao menos uma opção. Adicione opções antes de trocar o tipo."
+          );
+        }
+
+        // Toda acao `run` que aponta para uma categoria de suporte precisa
+        // referenciar uma categoria que existe de fato.
+        await assertSupportCategoriesExist(env, [
+          ...finalButtons.map((button) => resolveButtonAction(button)),
+          ...(finalKind === "select" && finalSelect ? finalSelect.options.map((o) => o.action) : [])
+        ]);
 
         const panel = await updatePanel(env, env.discordGuildId, id, patch);
         logger.info("panel.updated", {
@@ -212,8 +256,16 @@ export function registerPanelRoutes(app: FastifyInstance, env: AppEnv): void {
           return reply.code(404).send({ error: `Painel "${id}" nao encontrado.` });
         }
 
-        if (panel.buttons.length === 0) {
-          throw new ValidationError("Adicione ao menos um botão antes de publicar.");
+        const isEmpty =
+          panel.kind === "select"
+            ? !panel.select || panel.select.options.length === 0
+            : panel.buttons.length === 0;
+        if (isEmpty) {
+          throw new ValidationError(
+            panel.kind === "select"
+              ? "Adicione ao menos uma opção ao dropdown antes de publicar."
+              : "Adicione ao menos um botão antes de publicar."
+          );
         }
 
         const job = await createPanelJob(env, {
@@ -276,4 +328,37 @@ export function registerPanelRoutes(app: FastifyInstance, env: AppEnv): void {
       return respondError(reply, "panels.delete_failed", error);
     }
   });
+}
+
+/**
+ * Para cada acao `run` com `actionId: "support-ticket"`, confere que a
+ * categoria referenciada em `params.category` existe em
+ * `supportCategories/{guildId}_{id}`. Falha cedo com 400 em vez de deixar o
+ * bot recusar o ticket em runtime.
+ */
+async function assertSupportCategoriesExist(
+  env: AppEnv,
+  actions: readonly PanelActionConfig[]
+): Promise<void> {
+  const categoryIds = new Set<string>();
+  for (const action of actions) {
+    if (action.type === "run" && action.actionId === "support-ticket") {
+      const categoryId = action.params?.category;
+      if (categoryId) categoryIds.add(categoryId);
+    }
+  }
+  if (categoryIds.size === 0) return;
+
+  const found = await Promise.all(
+    [...categoryIds].map(async (categoryId) => ({
+      categoryId,
+      exists: Boolean(await getSupportCategory(env, env.discordGuildId, categoryId))
+    }))
+  );
+  const missing = found.filter((entry) => !entry.exists).map((entry) => entry.categoryId);
+  if (missing.length > 0) {
+    throw new ValidationError(
+      `Categoria(s) de suporte inexistente(s): ${missing.join(", ")}. Crie a categoria antes de referenciá-la no painel.`
+    );
+  }
 }

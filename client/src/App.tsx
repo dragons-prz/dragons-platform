@@ -9,6 +9,9 @@ import { PanelEditPage } from "./routes/PanelEditPage";
 import { PanelsPage } from "./routes/PanelsPage";
 import { ProtectedRoute } from "./routes/ProtectedRoute";
 import { SettingsPage } from "./routes/SettingsPage";
+import { SupportCategoriesPage } from "./routes/SupportCategoriesPage";
+import { SupportCategoryCreatePage } from "./routes/SupportCategoryCreatePage";
+import { SupportCategoryEditPage } from "./routes/SupportCategoryEditPage";
 
 export function App() {
   return (
@@ -24,6 +27,9 @@ export function App() {
               <Route path="paineis" element={<PanelsPage />} />
               <Route path="paineis/novo" element={<PanelCreatePage />} />
               <Route path="paineis/:id" element={<PanelEditPage />} />
+              <Route path="suporte" element={<SupportCategoriesPage />} />
+              <Route path="suporte/novo" element={<SupportCategoryCreatePage />} />
+              <Route path="suporte/:id" element={<SupportCategoryEditPage />} />
               <Route path="configuracao" element={<SettingsPage />} />
             </Route>
           </Route>

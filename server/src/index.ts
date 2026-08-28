@@ -7,6 +7,7 @@ import { loadEnv } from "./config/env.js";
 import { registerConfigRoutes } from "./routes/config.js";
 import { registerGuildRoutes } from "./routes/guild.js";
 import { registerPanelRoutes } from "./routes/panels.js";
+import { registerSupportCategoryRoutes } from "./routes/support-categories.js";
 import { registerStaticClient } from "./static.js";
 import { logger } from "./utils/logger.js";
 
@@ -36,6 +37,7 @@ async function main(): Promise<void> {
     registerPanelRoutes(protectedApp, env);
     registerConfigRoutes(protectedApp, env);
     registerGuildRoutes(protectedApp, env);
+    registerSupportCategoryRoutes(protectedApp, env);
   });
 
   // Depois das rotas de API: o fallback de SPA so deve pegar o que sobrar.

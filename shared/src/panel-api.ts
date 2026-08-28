@@ -1,4 +1,4 @@
-import type { PanelButtonStyle, PanelConfig } from "./panel.js";
+import type { PanelActionConfig, PanelButtonStyle, PanelConfig, PanelKind } from "./panel.js";
 import type { PanelJobStatus } from "./panel-job.js";
 
 /**
@@ -29,15 +29,45 @@ export interface PanelButtonInput {
   response: string;
   responseImageUrl: string | null;
   responseColor: string | null;
+  /**
+   * Acao do botao. Opcional para retrocompatibilidade: quando ausente, o
+   * servidor monta `{ type: "reply", ... }` a partir de
+   * `response`/`responseImageUrl`/`responseColor`.
+   */
+  action?: PanelActionConfig;
 }
 
-/** Todos os campos sao opcionais — envie so o que quer alterar. `buttons`, quando enviado, substitui o array inteiro. */
+/**
+ * Uma opcao de dropdown enviada pelo client. `id` segue a mesma regra do
+ * botao (so enviado quando ja existe; o servidor decide o id final via
+ * `assignSelectOptionIds`).
+ */
+export interface PanelSelectOptionInput {
+  id?: string;
+  label: string;
+  description: string | null;
+  emoji: string | null;
+  action: PanelActionConfig;
+}
+
+export interface PanelSelectInput {
+  placeholder: string;
+  options: PanelSelectOptionInput[];
+}
+
+/**
+ * Todos os campos sao opcionais — envie so o que quer alterar. `buttons` e
+ * `select`, quando enviados, substituem o valor inteiro. `kind` alterna
+ * entre painel de botoes e painel de dropdown.
+ */
 export interface UpdatePanelRequest {
   title?: string;
   description?: string;
   imageUrl?: string | null;
   color?: string | null;
+  kind?: PanelKind;
   buttons?: PanelButtonInput[];
+  select?: PanelSelectInput | null;
 }
 
 /** Resposta de `PATCH /api/panels/:id` — alem do painel atualizado, indica se uma sincronizacao com o Discord foi enfileirada automaticamente. */

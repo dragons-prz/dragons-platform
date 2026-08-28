@@ -1,13 +1,13 @@
-import type { PanelButtonStyle } from "@dragons/shared";
-import { HEX_COLOR_PATTERN, PANEL_LIMITS, validateColor, validateImageUrl } from "@dragons/shared";
+import type { PanelActionConfig, PanelButtonStyle, SupportCategoryConfig } from "@dragons/shared";
+import { PANEL_LIMITS } from "@dragons/shared";
 import { useId, useRef } from "react";
 import type { DragEvent } from "react";
 
 import { ArrowDownIcon, ArrowUpIcon, DragHandleIcon, TrashIcon } from "../components/icons";
+import { ActionEditor } from "./ActionEditor";
 import { CharacterCounter } from "./CharacterCounter";
-import { ColorField } from "./ColorField";
 import { EmojiPicker } from "./EmojiPicker";
-import { ImageUrlField } from "./ImageUrlField";
+import { syncLegacyReplyFields } from "./legacy";
 import type { LocalButton } from "./types";
 import { useCursorInsert } from "./useCursorInsert";
 import { ButtonStyleSelect } from "./ButtonStyleSelect";
@@ -16,6 +16,7 @@ interface ButtonEditorProps {
   button: LocalButton;
   index: number;
   total: number;
+  categories: SupportCategoryConfig[];
   onChange: (next: LocalButton) => void;
   onRemove: () => void;
   onMoveUp: () => void;
@@ -26,11 +27,12 @@ interface ButtonEditorProps {
   isDragTarget: boolean;
 }
 
-/** Um cartao de edicao de botao (label, resposta, estilo, emoji) com controles de remover e reordenar. */
+/** Um cartao de edicao de botao (label, estilo, emoji, acao) com controles de remover e reordenar. */
 export function ButtonEditor({
   button,
   index,
   total,
+  categories,
   onChange,
   onRemove,
   onMoveUp,
@@ -41,15 +43,15 @@ export function ButtonEditor({
   isDragTarget
 }: ButtonEditorProps) {
   const fieldId = useId();
-  const responseRef = useRef<HTMLTextAreaElement>(null);
   const emojiRef = useRef<HTMLInputElement>(null);
 
-  const insertIntoResponse = useCursorInsert(responseRef, button.response, (next) =>
-    onChange({ ...button, response: next })
-  );
   const insertIntoEmoji = useCursorInsert(emojiRef, button.emoji ?? "", (next) =>
     onChange({ ...button, emoji: next || null })
   );
+
+  function handleActionChange(action: PanelActionConfig) {
+    onChange({ ...button, action, ...syncLegacyReplyFields(action) });
+  }
 
   return (
     <li
@@ -153,32 +155,6 @@ export function ButtonEditor({
       </div>
 
       <div className="flex flex-col gap-1">
-        <div className="flex items-center justify-between">
-          <label
-            htmlFor={`${fieldId}-response`}
-            className="font-body text-xs font-medium text-ink-muted"
-          >
-            Resposta ao clicar (mensagem efêmera)
-          </label>
-          <CharacterCounter
-            current={button.response.length}
-            max={PANEL_LIMITS.BUTTON_RESPONSE_MAX}
-          />
-        </div>
-        <div className="flex items-start gap-2">
-          <textarea
-            id={`${fieldId}-response`}
-            ref={responseRef}
-            value={button.response}
-            onChange={(event) => onChange({ ...button, response: event.target.value })}
-            rows={3}
-            className="flex-1 resize-y rounded-lg border border-line bg-ground px-3 py-2 font-body text-sm text-ink outline-none focus-visible:border-ember"
-          />
-          <EmojiPicker onSelect={insertIntoResponse} label="Inserir emoji na resposta" />
-        </div>
-      </div>
-
-      <div className="flex flex-col gap-1">
         <span className="font-body text-xs font-medium text-ink-muted">Cor do botão</span>
         <ButtonStyleSelect
           value={button.style}
@@ -187,28 +163,7 @@ export function ButtonEditor({
         />
       </div>
 
-      <div className="flex flex-col gap-3 border-t border-line pt-3 sm:flex-row sm:items-start sm:gap-4">
-        <div className="flex-1">
-          <ImageUrlField
-            label="Imagem da resposta (opcional)"
-            value={button.responseImageUrl ?? ""}
-            onChange={(next) => onChange({ ...button, responseImageUrl: next || null })}
-            error={button.responseImageUrl ? validateImageUrl(button.responseImageUrl) : null}
-          />
-        </div>
-        <div className="flex-1">
-          <ColorField
-            label="Cor da resposta (opcional)"
-            value={button.responseColor ?? ""}
-            onChange={(next) => onChange({ ...button, responseColor: next || null })}
-            error={
-              button.responseColor && !HEX_COLOR_PATTERN.test(button.responseColor)
-                ? validateColor(button.responseColor)
-                : null
-            }
-          />
-        </div>
-      </div>
+      <ActionEditor action={button.action} onChange={handleActionChange} categories={categories} />
     </li>
   );
 }

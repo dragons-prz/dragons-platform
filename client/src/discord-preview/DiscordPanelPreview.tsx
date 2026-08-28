@@ -1,4 +1,10 @@
-import type { PanelButtonConfig, PanelConfig } from "@dragons/shared";
+import type {
+  PanelActionConfig,
+  PanelButtonConfig,
+  PanelConfig,
+  PanelSelectOption
+} from "@dragons/shared";
+import { getPanelActionSpec } from "@dragons/shared";
 import { useState } from "react";
 
 import { buttonStyleColors, discordColors, discordFontFamily } from "./colors";
@@ -33,7 +39,7 @@ function chunkIntoRows(buttons: PanelButtonConfig[]): PanelButtonConfig[][] {
  */
 export function DiscordPanelPreview({ panel }: { panel: PanelConfig }) {
   const [activeButtonId, setActiveButtonId] = useState<string | null>(null);
-  const rows = chunkIntoRows(panel.buttons);
+  const rows = panel.kind === "select" ? [] : chunkIntoRows(panel.buttons);
   const activeButton = panel.buttons.find((button) => button.id === activeButtonId) ?? null;
 
   return (
@@ -89,6 +95,10 @@ export function DiscordPanelPreview({ panel }: { panel: PanelConfig }) {
         </div>
       </div>
 
+      {panel.kind === "select" && panel.select ? (
+        <SelectPreview placeholder={panel.select.placeholder} options={panel.select.options} />
+      ) : null}
+
       {rows.length > 0 ? (
         <div className="mt-3 flex flex-col gap-2">
           {rows.map((row, rowIndex) => (
@@ -116,6 +126,101 @@ export function DiscordPanelPreview({ panel }: { panel: PanelConfig }) {
       ) : null}
 
       {activeButton ? <EphemeralResponsePreview button={activeButton} /> : null}
+    </div>
+  );
+}
+
+/** Descreve o que uma acao faz, para o preview do dropdown. */
+function describeAction(action: PanelActionConfig): string {
+  if (action.type === "reply") return "Responde com uma mensagem efêmera";
+  const spec = getPanelActionSpec(action.actionId);
+  const suffix = action.params?.category ? ` (${action.params.category})` : "";
+  return `Ação: ${spec?.label ?? action.actionId}${suffix}`;
+}
+
+/** Previa aproximada de um menu suspenso (string select) do Discord. */
+function SelectPreview({
+  placeholder,
+  options
+}: {
+  placeholder: string;
+  options: PanelSelectOption[];
+}) {
+  const [open, setOpen] = useState(false);
+
+  return (
+    <div className="mt-3" style={{ maxWidth: "26rem" }}>
+      <button
+        type="button"
+        onClick={() => setOpen((current) => !current)}
+        style={{
+          width: "100%",
+          textAlign: "left",
+          padding: "10px 12px",
+          borderRadius: 4,
+          border: `1px solid ${discordColors.embedAccentDefault}`,
+          backgroundColor: discordColors.messageSurface,
+          color: discordColors.embedText,
+          fontFamily: discordFontFamily,
+          fontSize: "14px",
+          cursor: "pointer"
+        }}
+      >
+        {placeholder || "Selecione uma opção"}
+        <span style={{ float: "right", opacity: 0.6 }}>{open ? "▲" : "▼"}</span>
+      </button>
+
+      {open ? (
+        <div
+          className="mt-1 flex flex-col"
+          style={{
+            borderRadius: 4,
+            border: `1px solid ${discordColors.embedAccentDefault}`,
+            backgroundColor: discordColors.embedSurface,
+            overflow: "hidden"
+          }}
+        >
+          {options.length === 0 ? (
+            <span
+              style={{
+                padding: "10px 12px",
+                color: discordColors.embedText,
+                fontFamily: discordFontFamily,
+                fontSize: "13px",
+                opacity: 0.7
+              }}
+            >
+              Nenhuma opção ainda.
+            </span>
+          ) : (
+            options.map((option) => (
+              <div
+                key={option.id}
+                style={{
+                  padding: "8px 12px",
+                  borderTop: `1px solid ${discordColors.messageSurface}`,
+                  fontFamily: discordFontFamily
+                }}
+              >
+                <div style={{ color: discordColors.embedTitle, fontSize: "14px", fontWeight: 600 }}>
+                  {option.emoji ? <span>{renderButtonEmoji(option.emoji)} </span> : null}
+                  {option.label || "sem texto"}
+                </div>
+                {option.description ? (
+                  <div style={{ color: discordColors.embedText, fontSize: "12px" }}>
+                    {option.description}
+                  </div>
+                ) : null}
+                <div
+                  style={{ color: discordColors.ephemeralFooter, fontSize: "11px", marginTop: 2 }}
+                >
+                  {describeAction(option.action)}
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+      ) : null}
     </div>
   );
 }

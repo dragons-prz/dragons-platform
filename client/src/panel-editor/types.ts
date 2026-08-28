@@ -1,4 +1,4 @@
-import type { PanelButtonStyle } from "@dragons/shared";
+import type { PanelActionConfig, PanelButtonStyle } from "@dragons/shared";
 
 /**
  * Estado local (no editor) de um botao de painel.
@@ -8,6 +8,11 @@ import type { PanelButtonStyle } from "@dragons/shared";
  * menos uma vez — a partir dai o servidor decidiu o id definitivo (slug do
  * label no momento da criacao) e ele NUNCA muda, mesmo que o label seja
  * editado depois. Ver `assignButtonIds` em `@dragons/shared`.
+ *
+ * `action` e a fonte de verdade do que o botao faz. Os campos
+ * `response`/`responseImageUrl`/`responseColor` sao legados: ficam em
+ * sincronia com uma acao `reply` para o preview e para docs lidos por
+ * codigo antigo.
  */
 export interface LocalButton {
   key: string;
@@ -18,10 +23,26 @@ export interface LocalButton {
   response: string;
   responseImageUrl: string | null;
   responseColor: string | null;
+  action: PanelActionConfig;
+}
+
+/** Estado local de uma opcao do dropdown (painel do tipo `select`). */
+export interface LocalSelectOption {
+  key: string;
+  id?: string;
+  label: string;
+  description: string | null;
+  emoji: string | null;
+  action: PanelActionConfig;
 }
 
 export function createLocalButtonId(): string {
   return typeof crypto !== "undefined" && "randomUUID" in crypto
     ? crypto.randomUUID()
     : `local-${Math.random().toString(36).slice(2)}-${Date.now()}`;
+}
+
+/** Acao `reply` vazia — padrao ao criar um botao/opcao novo. */
+export function emptyReplyAction(): PanelActionConfig {
+  return { type: "reply", response: "", responseImageUrl: null, responseColor: null };
 }
