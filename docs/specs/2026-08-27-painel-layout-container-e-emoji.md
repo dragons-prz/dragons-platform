@@ -82,8 +82,25 @@ Mensagem enviada com `flags: MessageFlags.IsComponentsV2` e **sem**
   customizado, então o seletor evita o erro de `:nome:` solto.
 - **Campo `emoji` de cada opção do dropdown**: `EmojiPicker` no slot
   dedicado (mesmo padrão do `ButtonEditor`).
-- **Não** na *descrição* da opção do dropdown nem no título de embed: são
+- **Não** na _descrição_ da opção do dropdown nem no título de embed: são
   texto puro no Discord, emoji customizado não renderiza.
+
+## Fase 1c — nome do tópico de ticket sem repetição
+
+Hoje `threadNameTemplate` só tem `{user}` → depois de fechar e reabrir, a
+mesma pessoa gera um tópico com nome idêntico (o Discord permite, mas
+confunde o suporte). O bot cria um tópico **novo** sempre; não reabre o
+arquivado.
+
+- **Bot** (`support-ticket.ts`): o id do ticket passa a ser gerado **antes**
+  de criar o tópico (`CreateTicketInput.id?` — a store usa se vier). Novas
+  variáveis no template: `{date}` (AAAAMMDD) e `{shortid}` (prefixo de 4
+  chars do id do ticket, unicidade garantida). `renderTemplate` já ignora
+  variáveis não usadas.
+- **shared**: `SUPPORT_CATEGORY_DEFAULTS` passa a sugerir `-{user}-{date}`
+  ao criar categoria. `validateSupportCategoryUpdate` continua exigindo só
+  `{user}`.
+- **client**: texto de ajuda do campo lista as três variáveis.
 
 ## Fora de escopo
 

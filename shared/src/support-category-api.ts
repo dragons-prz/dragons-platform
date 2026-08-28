@@ -46,7 +46,10 @@ export interface UpdateSupportCategoryRequest {
 export const SUPPORT_CATEGORY_DEFAULTS = {
   supportRoleIds: [] as string[],
   viewerRoleIds: [] as string[],
-  threadNameTemplateSuffix: "-{user}",
+  // `{date}` (AAAAMMDD) no default para o nome nao se repetir a cada ticket
+  // da mesma pessoa. `{user}` e obrigatorio; `{date}` e `{shortid}` sao
+  // opcionais (ver validateSupportCategoryUpdate / bot support-ticket.ts).
+  threadNameTemplateSuffix: "-{user}-{date}",
   openMessage: "Ola {user}! Descreva sua solicitacao e aguarde o atendimento da equipe.",
   claimMessage: "{claimer} esta atendendo o ticket de {user}.",
   closeMessage: "Ticket fechado por {closer}. Obrigado pelo contato, {user}.",
