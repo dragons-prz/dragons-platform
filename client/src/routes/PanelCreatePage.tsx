@@ -175,11 +175,15 @@ export function PanelCreatePage() {
           </button>
         </form>
 
-        <div className="flex h-fit flex-col gap-2 lg:sticky lg:top-6">
+        {/* Mobile: preview fixada no topo (order-first); o formulario rola
+            por baixo. Desktop (lg): coluna da direita, sticky. */}
+        <div className="sticky top-0 z-20 order-first flex flex-col gap-2 bg-ground pb-2 lg:order-none lg:top-6 lg:z-auto lg:h-fit lg:bg-transparent lg:pb-0">
           <h2 className="font-display text-sm font-semibold text-ink-muted">
             Pré-visualização (como aparece no Discord)
           </h2>
-          <DiscordPanelPreview panel={previewPanel} />
+          <div className="max-h-[42vh] overflow-y-auto rounded-lg lg:max-h-none lg:overflow-visible">
+            <DiscordPanelPreview panel={previewPanel} />
+          </div>
         </div>
       </div>
     </div>
