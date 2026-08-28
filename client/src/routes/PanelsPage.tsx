@@ -2,6 +2,7 @@ import { Link } from "react-router-dom";
 
 import { fetchPanels } from "../api/panels";
 import { ImageIcon, PanelsIcon } from "../components/icons";
+import { renderInlineCompact } from "../discord-preview/markdown";
 import { ErrorScreen, LoadingScreen } from "../components/StatusScreen";
 import { useApiData } from "../hooks/useApiData";
 
@@ -54,14 +55,20 @@ export function PanelsPage() {
                 className="flex h-full flex-col gap-3 rounded-xl border border-line bg-surface p-5 transition-colors hover:border-ember/60 hover:bg-surface-2"
               >
                 <span className="font-mono text-xs text-ink-muted">{panel.id}</span>
-                <h2 className="font-display text-lg font-semibold text-ink">{panel.title}</h2>
+                <h2 className="line-clamp-2 font-display text-lg font-semibold text-ink">
+                  {renderInlineCompact(panel.title, `t-${panel.id}`)}
+                </h2>
                 <p className="line-clamp-2 flex-1 font-body text-sm text-ink-muted">
-                  {panel.description}
+                  {renderInlineCompact(panel.description, `d-${panel.id}`)}
                 </p>
 
                 <div className="flex items-center gap-4 border-t border-line pt-3 font-body text-xs text-ink-muted">
                   <span>
-                    {panel.buttons.length} {panel.buttons.length === 1 ? "botão" : "botões"}
+                    {panel.kind === "select"
+                      ? `${panel.select?.options.length ?? 0} ${
+                          (panel.select?.options.length ?? 0) === 1 ? "opção" : "opções"
+                        }`
+                      : `${panel.buttons.length} ${panel.buttons.length === 1 ? "botão" : "botões"}`}
                   </span>
                   {panel.imageUrl ? (
                     <span className="flex items-center gap-1">

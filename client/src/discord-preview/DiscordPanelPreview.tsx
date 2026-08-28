@@ -9,6 +9,9 @@ import { useState } from "react";
 
 import { buttonStyleColors, discordColors, discordFontFamily } from "./colors";
 import { renderButtonEmoji, renderDiscordText } from "./emoji";
+import { renderInline, renderMarkdown } from "./markdown";
+
+const PREVIEW_MAX_WIDTH = "32rem";
 
 const MAX_BUTTONS_PER_ROW = 5;
 const MAX_ROWS = 5;
@@ -47,7 +50,7 @@ export function DiscordPanelPreview({ panel }: { panel: PanelConfig }) {
       className="rounded-lg p-4"
       style={{ backgroundColor: discordColors.messageSurface, fontFamily: discordFontFamily }}
     >
-      <div className="flex overflow-hidden rounded" style={{ maxWidth: "26rem" }}>
+      <div className="flex overflow-hidden rounded" style={{ maxWidth: PREVIEW_MAX_WIDTH }}>
         <div
           style={{
             width: 4,
@@ -59,7 +62,11 @@ export function DiscordPanelPreview({ panel }: { panel: PanelConfig }) {
           className="flex flex-1 flex-col gap-2"
           style={{
             backgroundColor: discordColors.embedSurface,
-            padding: panel.layout === "container" ? 0 : 16
+            padding: panel.layout === "container" ? 0 : 16,
+            color: discordColors.embedText,
+            fontSize: "15px",
+            lineHeight: 1.45,
+            overflowWrap: "anywhere"
           }}
         >
           {panel.layout === "container" && panel.imageUrl ? (
@@ -67,33 +74,23 @@ export function DiscordPanelPreview({ panel }: { panel: PanelConfig }) {
           ) : null}
 
           <div
-            className="flex flex-col gap-2"
+            className="flex flex-col gap-1"
             style={{ padding: panel.layout === "container" ? "12px 16px" : 0 }}
           >
-            <h3
+            <div
               style={{
                 color: discordColors.embedTitle,
                 fontWeight: 700,
                 fontSize: panel.layout === "container" ? "20px" : "16px",
-                margin: 0,
                 lineHeight: 1.3
               }}
             >
-              {renderDiscordText(panel.title)}
-            </h3>
+              {panel.layout === "container"
+                ? renderInline(panel.title, "title")
+                : renderDiscordText(panel.title)}
+            </div>
 
-            <p
-              style={{
-                color: discordColors.embedText,
-                fontSize: "14px",
-                lineHeight: 1.45,
-                margin: 0,
-                whiteSpace: "pre-wrap",
-                overflowWrap: "anywhere"
-              }}
-            >
-              {renderDiscordText(panel.description)}
-            </p>
+            <div>{renderMarkdown(panel.description, "desc")}</div>
 
             {panel.layout !== "container" && panel.imageUrl ? (
               <img
@@ -161,7 +158,7 @@ function SelectPreview({
   const [open, setOpen] = useState(false);
 
   return (
-    <div className="mt-3" style={{ maxWidth: "26rem" }}>
+    <div className="mt-3" style={{ maxWidth: PREVIEW_MAX_WIDTH }}>
       <button
         type="button"
         onClick={() => setOpen((current) => !current)}
@@ -295,7 +292,7 @@ function EphemeralResponsePreview({ button }: { button: PanelButtonConfig }) {
       className="mt-3 rounded-lg p-3"
       style={{ backgroundColor: discordColors.ephemeralSurface, fontFamily: discordFontFamily }}
     >
-      <div className="flex overflow-hidden rounded" style={{ maxWidth: "26rem" }}>
+      <div className="flex overflow-hidden rounded" style={{ maxWidth: PREVIEW_MAX_WIDTH }}>
         <div
           style={{
             width: 4,
@@ -305,20 +302,15 @@ function EphemeralResponsePreview({ button }: { button: PanelButtonConfig }) {
         />
         <div
           className="flex flex-1 flex-col gap-2 p-3"
-          style={{ backgroundColor: discordColors.embedSurface }}
+          style={{
+            backgroundColor: discordColors.embedSurface,
+            color: discordColors.embedText,
+            fontSize: "15px",
+            lineHeight: 1.45,
+            overflowWrap: "anywhere"
+          }}
         >
-          <p
-            style={{
-              color: discordColors.embedText,
-              fontSize: "14px",
-              lineHeight: 1.45,
-              margin: 0,
-              whiteSpace: "pre-wrap",
-              overflowWrap: "anywhere"
-            }}
-          >
-            {renderDiscordText(button.response)}
-          </p>
+          <div>{renderMarkdown(button.response, "eph")}</div>
 
           {button.responseImageUrl ? (
             <img
