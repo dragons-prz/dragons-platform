@@ -47,6 +47,7 @@ function normalizePanel(panel: PanelConfig): PanelConfig {
     ...panel,
     color: panel.color ?? null,
     kind: panel.kind ?? "buttons",
+    layout: panel.layout ?? "embed",
     buttons: [...panel.buttons]
       .sort((a, b) => a.order - b.order)
       .map((button) => ({
@@ -122,6 +123,7 @@ export async function createPanel(
     imageUrl: null,
     color: null,
     kind: "buttons",
+    layout: "embed",
     buttons: [],
     select: null,
     createdAt: now,
@@ -137,6 +139,7 @@ export interface PanelUpdate {
   imageUrl?: string | null;
   color?: string | null;
   kind?: PanelConfig["kind"];
+  layout?: PanelConfig["layout"];
   buttons?: PanelButtonConfig[];
   select?: PanelSelectConfig | null;
 }
@@ -163,6 +166,7 @@ export async function updatePanel(
   if (patch.imageUrl !== undefined) update.imageUrl = patch.imageUrl;
   if (patch.color !== undefined) update.color = patch.color;
   if (patch.kind !== undefined) update.kind = patch.kind;
+  if (patch.layout !== undefined) update.layout = patch.layout;
   if (patch.buttons !== undefined) update.buttons = patch.buttons;
   if (patch.select !== undefined) update.select = patch.select;
 

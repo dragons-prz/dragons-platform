@@ -19,8 +19,16 @@ export const PANEL_LIMITS = {
   BUTTON_LABEL_MAX: 80,
   BUTTON_RESPONSE_MAX: 2000,
   MAX_BUTTONS: 25,
-  ID_MAX: 40
+  ID_MAX: 40,
+  /**
+   * Layout `container` (Components V2): titulo + descricao viram um unico
+   * `TextDisplay`, cujo limite do Discord e 4000 caracteres. Deixamos folga
+   * para o markdown do titulo (`## ` + quebras de linha).
+   */
+  CONTAINER_TEXT_MAX: 3900
 } as const;
+
+const VALID_LAYOUTS = ["embed", "container"] as const;
 
 export const PANEL_ID_PATTERN = /^[a-z0-9-]{1,40}$/;
 
@@ -113,6 +121,27 @@ export function isEphemeralDiscordAttachmentUrl(url: string): boolean {
 export function validateColor(value: string): string | null {
   if (!HEX_COLOR_PATTERN.test(value)) {
     return "A cor deve estar no formato hexadecimal, como #E03131.";
+  }
+  return null;
+}
+
+/**
+ * Valida o layout do painel e, para `container`, o limite combinado de
+ * titulo + descricao (um unico `TextDisplay` do Components V2 aceita ate
+ * 4000 caracteres). Retorna a mensagem de erro em portugues, ou `null`.
+ */
+export function validatePanelLayout(
+  layout: string,
+  content: { title: string; description: string }
+): string | null {
+  if (!VALID_LAYOUTS.includes(layout as (typeof VALID_LAYOUTS)[number])) {
+    return 'O layout do painel precisa ser "embed" ou "container".';
+  }
+  if (layout === "container") {
+    const total = content.title.length + content.description.length;
+    if (total > PANEL_LIMITS.CONTAINER_TEXT_MAX) {
+      return `No layout Container, título + descrição somam no máximo ${PANEL_LIMITS.CONTAINER_TEXT_MAX} caracteres (atual: ${total}).`;
+    }
   }
   return null;
 }

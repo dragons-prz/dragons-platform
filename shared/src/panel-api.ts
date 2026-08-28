@@ -1,4 +1,10 @@
-import type { PanelActionConfig, PanelButtonStyle, PanelConfig, PanelKind } from "./panel.js";
+import type {
+  PanelActionConfig,
+  PanelButtonStyle,
+  PanelConfig,
+  PanelKind,
+  PanelLayout
+} from "./panel.js";
 import type { PanelJobStatus } from "./panel-job.js";
 
 /**
@@ -66,6 +72,7 @@ export interface UpdatePanelRequest {
   imageUrl?: string | null;
   color?: string | null;
   kind?: PanelKind;
+  layout?: PanelLayout;
   buttons?: PanelButtonInput[];
   select?: PanelSelectInput | null;
 }

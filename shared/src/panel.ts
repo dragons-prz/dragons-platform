@@ -19,6 +19,19 @@ export type PanelButtonStyle = "Primary" | "Secondary" | "Success" | "Danger";
  */
 export type PanelKind = "buttons" | "select";
 
+/**
+ * Formato da mensagem do painel:
+ * - `embed`: um `EmbedBuilder` (formato historico) — imagem sempre embaixo,
+ *   `title` nao renderiza emoji customizado do servidor.
+ * - `container`: Components V2 (`ContainerBuilder`) — a imagem vira um
+ *   banner no topo e o titulo/descricao viram texto markdown (emoji de
+ *   qualquer tipo em qualquer lugar).
+ *
+ * Documentos antigos nao tem o campo — o mapeamento trata ausencia como
+ * `"embed"`.
+ */
+export type PanelLayout = "embed" | "container";
+
 export interface PanelReplyAction {
   type: "reply";
   response: string;
@@ -74,6 +87,7 @@ export interface PanelConfig {
   imageUrl: string | null;
   color: string | null;
   kind: PanelKind;
+  layout: PanelLayout;
   buttons: PanelButtonConfig[];
   /** Preenchido apenas quando `kind === "select"`; `null` caso contrario. */
   select: PanelSelectConfig | null;

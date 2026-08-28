@@ -2,6 +2,7 @@ import type {
   PanelButtonInput,
   PanelConfig,
   PanelKind,
+  PanelLayout,
   PanelSelectInput,
   SupportCategoryConfig,
   UpdatePanelRequest
@@ -12,6 +13,7 @@ import {
   validateColor,
   validateDescription,
   validateImageUrl,
+  validatePanelLayout,
   validateSelect,
   validateTitle
 } from "@dragons/shared";
@@ -78,6 +80,7 @@ interface FormState {
   imageUrl: string;
   color: string;
   kind: PanelKind;
+  layout: PanelLayout;
   buttons: LocalButton[];
   placeholder: string;
   selectOptions: LocalSelectOption[];
@@ -90,6 +93,7 @@ function toFormState(panel: PanelConfig): FormState {
     imageUrl: panel.imageUrl ?? "",
     color: panel.color ?? "",
     kind: panel.kind ?? "buttons",
+    layout: panel.layout ?? "embed",
     buttons: [...panel.buttons]
       .sort((a, b) => a.order - b.order)
       .map((button) => ({
@@ -188,6 +192,10 @@ function PanelEditorForm({
   const selectInput = toSelectInput(form);
   const buttonsError = form.kind === "buttons" ? validateButtons(buttonsInput) : null;
   const selectError = form.kind === "select" ? validateSelect(selectInput) : null;
+  const layoutError = validatePanelLayout(form.layout, {
+    title: form.title,
+    description: form.description
+  });
 
   const canSave =
     saveState !== "saving" &&
@@ -196,7 +204,8 @@ function PanelEditorForm({
     !imageUrlError &&
     !colorError &&
     !buttonsError &&
-    !selectError;
+    !selectError &&
+    !layoutError;
 
   // Depois que um job de publicacao/sincronizacao chega em `completed`,
   // `publishedChannelId`/`publishedMessageId` do painel podem ter mudado no
@@ -226,6 +235,7 @@ function PanelEditorForm({
         imageUrl: imageUrl.length > 0 ? imageUrl : null,
         color: color.length > 0 ? color : null,
         kind: form.kind,
+        layout: form.layout,
         buttons: buttonsInput,
         select: form.kind === "select" ? selectInput : null
       };
@@ -312,6 +322,7 @@ function PanelEditorForm({
     imageUrl: imageUrl.length > 0 ? imageUrl : null,
     color: color.length > 0 ? color : null,
     kind: form.kind,
+    layout: form.layout,
     buttons: form.buttons.map((button, index) => ({
       id: button.id ?? button.key,
       label: button.label,
@@ -434,6 +445,34 @@ function PanelEditorForm({
             onChange={(next) => setForm((current) => ({ ...current, color: next }))}
             error={color.length > 0 ? colorError : null}
           />
+
+          <div className="flex flex-col gap-2 border-t border-line pt-5">
+            <span className="font-body text-xs font-medium text-ink-muted">Layout</span>
+            <div className="flex flex-wrap gap-2">
+              <KindChip
+                active={form.layout === "embed"}
+                onClick={() => setForm((current) => ({ ...current, layout: "embed" }))}
+              >
+                Embed
+              </KindChip>
+              <KindChip
+                active={form.layout === "container"}
+                onClick={() => setForm((current) => ({ ...current, layout: "container" }))}
+              >
+                Container (banner no topo)
+              </KindChip>
+            </div>
+            <p className="font-body text-xs text-ink-muted">
+              {form.layout === "container"
+                ? "Imagem como banner no topo; título e descrição viram texto (emoji do servidor funciona no título). Trocar o layout de um painel já publicado reposta a mensagem (novo ID)."
+                : "Formato clássico: imagem embaixo, barra colorida à esquerda. Emoji customizado não renderiza no título."}
+            </p>
+            {layoutError ? (
+              <p role="alert" className="font-body text-xs text-danger">
+                {layoutError}
+              </p>
+            ) : null}
+          </div>
 
           <div className="flex flex-col gap-2 border-t border-line pt-5">
             <span className="font-body text-xs font-medium text-ink-muted">Tipo de painel</span>
