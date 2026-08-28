@@ -16,7 +16,7 @@ import {
   validateTitle
 } from "@dragons/shared";
 import type { MouseEvent, ReactNode } from "react";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 
 import { ApiError } from "../api/client";
@@ -28,6 +28,8 @@ import { DiscordPanelPreview } from "../discord-preview/DiscordPanelPreview";
 import { useApiData } from "../hooks/useApiData";
 import { ButtonEditorList } from "../panel-editor/ButtonEditorList";
 import { CharacterCounter } from "../panel-editor/CharacterCounter";
+import { EmojiPicker } from "../panel-editor/EmojiPicker";
+import { useCursorInsert } from "../panel-editor/useCursorInsert";
 import { ColorField } from "../panel-editor/ColorField";
 import { ConfirmDialog } from "../panel-editor/ConfirmDialog";
 import { ImageUrlField } from "../panel-editor/ImageUrlField";
@@ -154,6 +156,10 @@ function PanelEditorForm({
 
   const [saved, setSaved] = useState(initialPanel);
   const [form, setForm] = useState<FormState>(() => toFormState(initialPanel));
+  const descriptionRef = useRef<HTMLTextAreaElement>(null);
+  const insertIntoDescription = useCursorInsert(descriptionRef, form.description, (next) =>
+    setForm((current) => ({ ...current, description: next }))
+  );
   const [saveState, setSaveState] = useState<SaveState>("idle");
   const [saveError, setSaveError] = useState<string | null>(null);
   const [confirmDelete, setConfirmDelete] = useState(false);
@@ -398,15 +404,19 @@ function PanelEditorForm({
                 max={PANEL_LIMITS.DESCRIPTION_MAX}
               />
             </div>
-            <textarea
-              id="panel-description"
-              value={form.description}
-              onChange={(event) =>
-                setForm((current) => ({ ...current, description: event.target.value }))
-              }
-              rows={6}
-              className="resize-y rounded-lg border border-line bg-ground px-3 py-2 font-body text-sm text-ink outline-none focus-visible:border-ember"
-            />
+            <div className="flex items-start gap-2">
+              <textarea
+                id="panel-description"
+                ref={descriptionRef}
+                value={form.description}
+                onChange={(event) =>
+                  setForm((current) => ({ ...current, description: event.target.value }))
+                }
+                rows={6}
+                className="flex-1 resize-y rounded-lg border border-line bg-ground px-3 py-2 font-body text-sm text-ink outline-none focus-visible:border-ember"
+              />
+              <EmojiPicker onSelect={insertIntoDescription} label="Inserir emoji do servidor" />
+            </div>
             {form.description.length > 0 && descriptionError ? (
               <p className="font-body text-xs text-danger">{descriptionError}</p>
             ) : null}
