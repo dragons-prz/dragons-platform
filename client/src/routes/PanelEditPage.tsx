@@ -593,17 +593,22 @@ function PanelEditorForm({
           </div>
         </div>
 
-        <div className="flex h-fit flex-col gap-2 lg:sticky lg:top-6">
+        {/* Mobile: preview fixada no topo (order-first), com altura limitada
+            e scroll proprio; o formulario rola por baixo. Desktop (lg):
+            volta a ser a coluna da direita, sticky logo abaixo do topo. */}
+        <div className="sticky top-0 z-20 order-first flex flex-col gap-2 bg-ground pb-2 lg:order-none lg:top-6 lg:z-auto lg:h-fit lg:bg-transparent lg:pb-0">
           <h2 className="font-display text-sm font-semibold text-ink-muted">
             Pré-visualização (como aparece no Discord)
           </h2>
-          <DiscordPanelPreview panel={previewPanel} />
+          <div className="max-h-[42vh] overflow-y-auto rounded-lg lg:max-h-none lg:overflow-visible">
+            <DiscordPanelPreview panel={previewPanel} />
+          </div>
           {saved.publishedChannelId ? (
-            <p className="font-body text-xs text-ink-muted">
+            <p className="hidden font-body text-xs text-ink-muted lg:block">
               Salvar altera a mensagem publicada no Discord automaticamente.
             </p>
           ) : (
-            <p className="font-body text-xs text-ink-muted">
+            <p className="hidden font-body text-xs text-ink-muted lg:block">
               Isto ainda é só uma prévia — publique na seção acima para postar no Discord.
             </p>
           )}
