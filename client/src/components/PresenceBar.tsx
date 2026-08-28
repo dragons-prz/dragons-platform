@@ -36,23 +36,58 @@ function useSelfId(): string | null {
   return state.status === "authenticated" ? state.session.id : null;
 }
 
-function PresenceAvatar({ user, title }: { user: PresenceUser; title: string }) {
+/**
+ * Foto do usuario (cai para as iniciais quando o Discord nao tem avatar).
+ * `sizeClass` controla o tamanho — o header usa `h-7 w-7`, indicadores
+ * inline na lista de paineis usam `h-5 w-5`.
+ */
+export function PresenceAvatar({
+  user,
+  title,
+  sizeClass = "h-7 w-7",
+  textClass = "text-[10px]"
+}: {
+  user: Pick<PresenceUser, "username" | "avatarUrl">;
+  title: string;
+  sizeClass?: string;
+  textClass?: string;
+}) {
   if (user.avatarUrl) {
     return (
       <img
         src={user.avatarUrl}
         alt={user.username}
         title={title}
-        className="h-7 w-7 rounded-full border-2 border-surface bg-surface-2 object-cover"
+        className={`${sizeClass} rounded-full border-2 border-surface bg-surface-2 object-cover`}
       />
     );
   }
   return (
     <span
       title={title}
-      className="flex h-7 w-7 items-center justify-center rounded-full border-2 border-surface bg-surface-2 font-display text-[10px] font-semibold text-ink"
+      className={`${sizeClass} ${textClass} flex items-center justify-center rounded-full border-2 border-surface bg-surface-2 font-display font-semibold text-ink`}
     >
       {user.username.slice(0, 2).toUpperCase()}
+    </span>
+  );
+}
+
+/**
+ * Pilha compacta de fotos (para indicadores inline). O tooltip de cada
+ * foto e o nome da pessoa.
+ */
+export function PresenceAvatarStack({ users }: { users: PresenceUser[] }) {
+  return (
+    <span className="flex -space-x-1.5">
+      {users.map((user) => (
+        <PresenceAvatar
+          key={user.id}
+          user={user}
+          title={user.username}
+          sizeClass="h-5 w-5"
+          textClass="text-[8px]"
+        />
+      ))}
     </span>
   );
 }
@@ -115,10 +150,13 @@ export function PanelCoEditors({ panelId }: { panelId: string }) {
   return (
     <div className="mb-4 flex items-start gap-3 rounded-xl border border-warn/40 bg-warn/10 p-4">
       <WarningIcon className="mt-0.5 h-5 w-5 shrink-0 text-warn" />
-      <p className="font-body text-sm text-ink">
-        <span className="font-semibold">{names}</span> {verb} com este painel aberto agora. Se as
-        duas pessoas salvarem, a última sobrescreve as alterações da outra.
-      </p>
+      <div className="flex flex-wrap items-center gap-2">
+        <PresenceAvatarStack users={coEditors} />
+        <p className="font-body text-sm text-ink">
+          <span className="font-semibold">{names}</span> {verb} com este painel aberto agora. Se as
+          duas pessoas salvarem, a última sobrescreve as alterações da outra.
+        </p>
+      </div>
     </div>
   );
 }

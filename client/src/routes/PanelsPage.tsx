@@ -1,8 +1,10 @@
+import type { PresenceUser } from "@dragons/shared";
 import { parsePanelLocation } from "@dragons/shared";
 import { Link } from "react-router-dom";
 
 import { fetchPanels } from "../api/panels";
 import { ImageIcon, PanelsIcon } from "../components/icons";
+import { PresenceAvatarStack } from "../components/PresenceBar";
 import { renderInlineCompact } from "../discord-preview/markdown";
 import { ErrorScreen, LoadingScreen } from "../components/StatusScreen";
 import { useAuth } from "../context/AuthContext";
@@ -16,13 +18,13 @@ export function PanelsPage() {
   const { state: authState } = useAuth();
   const selfId = authState.status === "authenticated" ? authState.session.id : null;
 
-  const editorsByPanel = new Map<string, string[]>();
+  const editorsByPanel = new Map<string, PresenceUser[]>();
   for (const user of users) {
     if (user.id === selfId) continue;
     const panelId = parsePanelLocation(user.location);
     if (!panelId) continue;
     const list = editorsByPanel.get(panelId) ?? [];
-    list.push(user.username);
+    list.push(user);
     editorsByPanel.set(panelId, list);
   }
 
@@ -77,11 +79,13 @@ export function PanelsPage() {
                     <span className="font-mono text-xs text-ink-muted">{panel.id}</span>
                     {editors.length > 0 ? (
                       <span
-                        title={`${editors.join(", ")} ${editors.length === 1 ? "está" : "estão"} editando agora`}
-                        className="flex items-center gap-1 rounded-full bg-warn/10 px-2 py-0.5 font-body text-xs font-medium text-warn"
+                        title={`${editors.map((user) => user.username).join(", ")} ${
+                          editors.length === 1 ? "está" : "estão"
+                        } editando agora`}
+                        className="flex items-center gap-1.5 rounded-full bg-warn/10 py-0.5 pr-2 pl-1 font-body text-xs font-medium text-warn"
                       >
+                        <PresenceAvatarStack users={editors} />
                         <span aria-hidden="true">✏️</span>
-                        <span className="max-w-[10rem] truncate">{editors.join(", ")}</span>
                       </span>
                     ) : null}
                   </div>
