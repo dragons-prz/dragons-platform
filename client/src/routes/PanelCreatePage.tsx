@@ -21,6 +21,7 @@ const EMPTY_PANEL_FOR_PREVIEW: Omit<PanelConfig, "id" | "title" | "description">
   imageUrl: null,
   color: null,
   kind: "buttons",
+  layout: "embed",
   buttons: [],
   select: null,
   createdAt: "",

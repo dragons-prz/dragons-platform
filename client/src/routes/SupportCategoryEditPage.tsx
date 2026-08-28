@@ -220,7 +220,7 @@ function CategoryForm({
           onToggle={(roleId) => toggleRole("viewerRoleIds", roleId)}
         />
 
-        <Field label='Nome do tópico (use "{user}" para o nome de quem abriu)'>
+        <Field label="Nome do tópico — {user} (obrigatório), {date} (AAAAMMDD), {shortid}. Sem {date}/{shortid} o nome se repete a cada ticket da mesma pessoa.">
           <input
             type="text"
             value={form.threadNameTemplate}

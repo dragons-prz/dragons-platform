@@ -56,42 +56,54 @@ export function DiscordPanelPreview({ panel }: { panel: PanelConfig }) {
           }}
         />
         <div
-          className="flex flex-1 flex-col gap-2 p-4"
-          style={{ backgroundColor: discordColors.embedSurface }}
+          className="flex flex-1 flex-col gap-2"
+          style={{
+            backgroundColor: discordColors.embedSurface,
+            padding: panel.layout === "container" ? 0 : 16
+          }}
         >
-          <h3
-            style={{
-              color: discordColors.embedTitle,
-              fontWeight: 700,
-              fontSize: "16px",
-              margin: 0,
-              lineHeight: 1.3
-            }}
-          >
-            {renderDiscordText(panel.title)}
-          </h3>
-
-          <p
-            style={{
-              color: discordColors.embedText,
-              fontSize: "14px",
-              lineHeight: 1.45,
-              margin: 0,
-              whiteSpace: "pre-wrap",
-              overflowWrap: "anywhere"
-            }}
-          >
-            {renderDiscordText(panel.description)}
-          </p>
-
-          {panel.imageUrl ? (
-            <img
-              src={panel.imageUrl}
-              alt=""
-              className="mt-1 rounded"
-              style={{ maxWidth: "100%", display: "block" }}
-            />
+          {panel.layout === "container" && panel.imageUrl ? (
+            <img src={panel.imageUrl} alt="" style={{ width: "100%", display: "block" }} />
           ) : null}
+
+          <div
+            className="flex flex-col gap-2"
+            style={{ padding: panel.layout === "container" ? "12px 16px" : 0 }}
+          >
+            <h3
+              style={{
+                color: discordColors.embedTitle,
+                fontWeight: 700,
+                fontSize: panel.layout === "container" ? "20px" : "16px",
+                margin: 0,
+                lineHeight: 1.3
+              }}
+            >
+              {renderDiscordText(panel.title)}
+            </h3>
+
+            <p
+              style={{
+                color: discordColors.embedText,
+                fontSize: "14px",
+                lineHeight: 1.45,
+                margin: 0,
+                whiteSpace: "pre-wrap",
+                overflowWrap: "anywhere"
+              }}
+            >
+              {renderDiscordText(panel.description)}
+            </p>
+
+            {panel.layout !== "container" && panel.imageUrl ? (
+              <img
+                src={panel.imageUrl}
+                alt=""
+                className="mt-1 rounded"
+                style={{ maxWidth: "100%", display: "block" }}
+              />
+            ) : null}
+          </div>
         </div>
       </div>
 

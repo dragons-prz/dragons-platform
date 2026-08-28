@@ -4,6 +4,7 @@ import type {
   PanelButtonConfig,
   PanelButtonInput,
   PanelKind,
+  PanelLayout,
   PanelPublishStatusResponse,
   PanelSelectConfig,
   PublishPanelRequest,
@@ -20,6 +21,7 @@ import {
   validateDescription,
   validateImageUrl,
   validatePanelId,
+  validatePanelLayout,
   validateSelect,
   validateTitle
 } from "@dragons/shared";
@@ -125,6 +127,7 @@ export function registerPanelRoutes(app: FastifyInstance, env: AppEnv): void {
           imageUrl?: string | null;
           color?: string | null;
           kind?: PanelKind;
+          layout?: PanelLayout;
           buttons?: PanelButtonConfig[];
           select?: PanelSelectConfig | null;
         } = {};
@@ -164,6 +167,10 @@ export function registerPanelRoutes(app: FastifyInstance, env: AppEnv): void {
           patch.kind = body.kind;
         }
 
+        if (body.layout !== undefined) {
+          patch.layout = body.layout;
+        }
+
         if (body.buttons !== undefined) {
           const buttons: PanelButtonInput[] = body.buttons;
           const buttonsError = validateButtons(buttons);
@@ -186,6 +193,14 @@ export function registerPanelRoutes(app: FastifyInstance, env: AppEnv): void {
         const finalKind = patch.kind ?? existing.kind;
         const finalSelect = patch.select !== undefined ? patch.select : existing.select;
         const finalButtons = patch.buttons ?? existing.buttons;
+
+        const finalLayout = patch.layout ?? existing.layout;
+        const layoutError = validatePanelLayout(finalLayout, {
+          title: patch.title ?? existing.title,
+          description: patch.description ?? existing.description
+        });
+        if (layoutError) throw new ValidationError(layoutError);
+
         if (finalKind === "select" && (!finalSelect || finalSelect.options.length === 0)) {
           throw new ValidationError(
             "Um painel do tipo dropdown precisa de ao menos uma opção. Adicione opções antes de trocar o tipo."

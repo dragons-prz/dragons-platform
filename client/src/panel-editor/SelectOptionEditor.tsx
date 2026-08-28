@@ -1,11 +1,13 @@
 import type { PanelActionConfig, SupportCategoryConfig } from "@dragons/shared";
 import { SELECT_LIMITS } from "@dragons/shared";
-import { useId } from "react";
+import { useId, useRef } from "react";
 
 import { ArrowDownIcon, ArrowUpIcon, TrashIcon } from "../components/icons";
 import { ActionEditor } from "./ActionEditor";
 import { CharacterCounter } from "./CharacterCounter";
+import { EmojiPicker } from "./EmojiPicker";
 import type { LocalSelectOption } from "./types";
+import { useCursorInsert } from "./useCursorInsert";
 
 interface SelectOptionEditorProps {
   option: LocalSelectOption;
@@ -30,6 +32,10 @@ export function SelectOptionEditor({
   onMoveDown
 }: SelectOptionEditorProps) {
   const fieldId = useId();
+  const emojiRef = useRef<HTMLInputElement>(null);
+  const insertIntoEmoji = useCursorInsert(emojiRef, option.emoji ?? "", (next) =>
+    onChange({ ...option, emoji: next || null })
+  );
 
   function handleActionChange(action: PanelActionConfig) {
     onChange({ ...option, action });
@@ -102,14 +108,18 @@ export function SelectOptionEditor({
           >
             Emoji (opcional)
           </label>
-          <input
-            id={`${fieldId}-emoji`}
-            type="text"
-            value={option.emoji ?? ""}
-            onChange={(event) => onChange({ ...option, emoji: event.target.value || null })}
-            placeholder="😀 ou <:nome:id>"
-            className="w-32 rounded-lg border border-line bg-ground px-3 py-2 font-body text-sm text-ink outline-none focus-visible:border-ember"
-          />
+          <div className="flex items-center gap-2">
+            <input
+              id={`${fieldId}-emoji`}
+              ref={emojiRef}
+              type="text"
+              value={option.emoji ?? ""}
+              onChange={(event) => onChange({ ...option, emoji: event.target.value || null })}
+              placeholder="😀 ou <:nome:id>"
+              className="w-32 rounded-lg border border-line bg-ground px-3 py-2 font-body text-sm text-ink outline-none focus-visible:border-ember"
+            />
+            <EmojiPicker onSelect={insertIntoEmoji} label="Inserir emoji do servidor" />
+          </div>
         </div>
       </div>
 
