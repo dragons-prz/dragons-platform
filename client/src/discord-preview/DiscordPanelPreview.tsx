@@ -11,7 +11,8 @@ import { buttonStyleColors, discordColors, discordFontFamily } from "./colors";
 import { renderButtonEmoji, renderDiscordText } from "./emoji";
 import { renderInline, renderMarkdown } from "./markdown";
 
-const PREVIEW_MAX_WIDTH = "32rem";
+// `min(...)` para nao estourar a largura da tela no mobile.
+const PREVIEW_MAX_WIDTH = "min(32rem, 100%)";
 
 const MAX_BUTTONS_PER_ROW = 5;
 const MAX_ROWS = 5;

@@ -355,7 +355,7 @@ function PanelEditorForm({
 
   return (
     <div className="flex flex-col gap-6">
-      <div className="flex items-center justify-between gap-4">
+      <div className="flex flex-wrap items-center justify-between gap-3">
         <Link
           to="/paineis"
           onClick={handleBackClick}
@@ -375,7 +375,7 @@ function PanelEditorForm({
       </div>
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,34rem)]">
-        <div className="flex flex-col gap-6 rounded-xl border border-line bg-surface p-6">
+        <div className="flex flex-col gap-6 rounded-xl border border-line bg-surface p-4 sm:p-6">
           <div>
             <span className="font-mono text-xs text-ink-muted">{saved.id}</span>
             <h1 className="mt-1 font-display text-2xl font-bold text-ink">Editar painel</h1>
@@ -593,7 +593,7 @@ function PanelEditorForm({
           </div>
         </div>
 
-        <div className="sticky top-6 flex h-fit flex-col gap-2">
+        <div className="flex h-fit flex-col gap-2 lg:sticky lg:top-6">
           <h2 className="font-display text-sm font-semibold text-ink-muted">
             Pré-visualização (como aparece no Discord)
           </h2>

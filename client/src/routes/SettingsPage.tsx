@@ -205,12 +205,12 @@ function SettingsForm({
         </p>
       </div>
 
-      <section className="rounded-xl border border-line bg-surface p-6">
+      <section className="rounded-xl border border-line bg-surface p-4 sm:p-6">
         <h2 className="font-display text-lg font-semibold text-ink">Saúde da integração</h2>
         <HealthBlock state={healthState} />
       </section>
 
-      <section className="flex flex-col gap-5 rounded-xl border border-line bg-surface p-6">
+      <section className="flex flex-col gap-5 rounded-xl border border-line bg-surface p-4 sm:p-6">
         <h2 className="font-display text-lg font-semibold text-ink">Cargos</h2>
 
         <SelectField
@@ -239,7 +239,7 @@ function SettingsForm({
         />
       </section>
 
-      <section className="flex flex-col gap-5 rounded-xl border border-line bg-surface p-6">
+      <section className="flex flex-col gap-5 rounded-xl border border-line bg-surface p-4 sm:p-6">
         <h2 className="font-display text-lg font-semibold text-ink">Canais</h2>
 
         <SelectField
@@ -285,7 +285,7 @@ function SettingsForm({
         />
       </section>
 
-      <section className="flex flex-col gap-5 rounded-xl border border-line bg-surface p-6">
+      <section className="flex flex-col gap-5 rounded-xl border border-line bg-surface p-4 sm:p-6">
         <h2 className="font-display text-lg font-semibold text-ink">Parâmetros de recrutamento</h2>
 
         <NumberField
