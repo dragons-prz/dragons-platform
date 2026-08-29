@@ -8,6 +8,7 @@ import type {
   UpdatePanelRequest
 } from "@dragons/shared";
 import {
+  formatPanelLocation,
   PANEL_LIMITS,
   validateButtons,
   validateColor,
@@ -25,8 +26,10 @@ import { ApiError } from "../api/client";
 import { deletePanel, fetchPanel, publishPanel, updatePanel } from "../api/panels";
 import { fetchSupportCategories } from "../api/support-categories";
 import { BackIcon } from "../components/icons";
+import { PanelCoEditors } from "../components/PresenceBar";
 import { ErrorScreen, LoadingScreen } from "../components/StatusScreen";
 import { DiscordPanelPreview } from "../discord-preview/DiscordPanelPreview";
+import { usePresenceLocation } from "../context/PresenceContext";
 import { useApiData } from "../hooks/useApiData";
 import { ButtonEditorList } from "../panel-editor/ButtonEditorList";
 import { CharacterCounter } from "../panel-editor/CharacterCounter";
@@ -46,6 +49,7 @@ const DEFAULT_PLACEHOLDER = "Selecione uma opção!";
 
 export function PanelEditPage() {
   const { id } = useParams<{ id: string }>();
+  usePresenceLocation(id ? formatPanelLocation(id) : "panels");
   const state = useApiData(
     (signal) => {
       if (!id) return Promise.reject(new Error("Id do painel ausente na URL."));
@@ -71,7 +75,12 @@ export function PanelEditPage() {
 function PanelEditGate({ initialPanel }: { initialPanel: PanelConfig }) {
   const categoriesState = useApiData(fetchSupportCategories, []);
   const categories = categoriesState.status === "ready" ? categoriesState.data : [];
-  return <PanelEditorForm initialPanel={initialPanel} categories={categories} />;
+  return (
+    <>
+      <PanelCoEditors panelId={initialPanel.id} />
+      <PanelEditorForm initialPanel={initialPanel} categories={categories} />
+    </>
+  );
 }
 
 interface FormState {

@@ -8,11 +8,13 @@ import { fetchGuildChannels } from "../api/guild";
 import { createSupportCategory } from "../api/support-categories";
 import { BackIcon } from "../components/icons";
 import { ErrorScreen, LoadingScreen } from "../components/StatusScreen";
+import { usePresenceLocation } from "../context/PresenceContext";
 import { useApiData } from "../hooks/useApiData";
 
 export function SupportCategoryCreatePage() {
   const navigate = useNavigate();
   const fieldId = useId();
+  usePresenceLocation("support-category-new");
   const channelsState = useApiData(fetchGuildChannels, []);
 
   const [id, setId] = useState("");

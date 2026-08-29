@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { fetchSupportCategories } from "../api/support-categories";
 import { PanelsIcon } from "../components/icons";
 import { ErrorScreen, LoadingScreen } from "../components/StatusScreen";
+import { usePresenceLocation } from "../context/PresenceContext";
 import { useApiData } from "../hooks/useApiData";
 
 /**
@@ -11,6 +12,7 @@ import { useApiData } from "../hooks/useApiData";
  * bot le isso ao acionar a acao `support-ticket` de um painel.
  */
 export function SupportCategoriesPage() {
+  usePresenceLocation("support-categories");
   const state = useApiData(fetchSupportCategories, []);
 
   if (state.status === "loading") {
