@@ -2,6 +2,8 @@ export * from "./panel.js";
 export * from "./panel-api.js";
 export * from "./panel-actions.js";
 export * from "./panel-validation.js";
+export * from "./recruitment-config.js";
+export * from "./recruitment-config-api.js";
 export * from "./support-category.js";
 export * from "./support-category-api.js";
 export * from "./guild-config.js";

@@ -9,6 +9,7 @@ import { PresenceProvider } from "../context/PresenceContext";
 const NAV_ITEMS = [
   { to: "/paineis", label: "Painéis", Icon: PanelsIcon },
   { to: "/suporte", label: "Suporte", Icon: PanelsIcon },
+  { to: "/recrutamento", label: "Recrutamento", Icon: PanelsIcon },
   { to: "/configuracao", label: "Configuração", Icon: SettingsIcon }
 ];
 

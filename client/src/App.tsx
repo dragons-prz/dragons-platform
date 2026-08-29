@@ -8,6 +8,7 @@ import { PanelCreatePage } from "./routes/PanelCreatePage";
 import { PanelEditPage } from "./routes/PanelEditPage";
 import { PanelsPage } from "./routes/PanelsPage";
 import { ProtectedRoute } from "./routes/ProtectedRoute";
+import { RecruitmentConfigPage } from "./routes/RecruitmentConfigPage";
 import { SettingsPage } from "./routes/SettingsPage";
 import { SupportCategoriesPage } from "./routes/SupportCategoriesPage";
 import { SupportCategoryCreatePage } from "./routes/SupportCategoryCreatePage";
@@ -30,6 +31,7 @@ export function App() {
               <Route path="suporte" element={<SupportCategoriesPage />} />
               <Route path="suporte/novo" element={<SupportCategoryCreatePage />} />
               <Route path="suporte/:id" element={<SupportCategoryEditPage />} />
+              <Route path="recrutamento" element={<RecruitmentConfigPage />} />
               <Route path="configuracao" element={<SettingsPage />} />
             </Route>
           </Route>

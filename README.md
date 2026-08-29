@@ -47,6 +47,20 @@ npm run dev:client   # SPA Vite em http://localhost:5173 (proxy /api -> :3000)
 Abra `http://localhost:5173` — deve aparecer a tela de login ("Entrar com
 Discord").
 
+## Configuração do recrutamento
+
+A tela **Recrutamento** (`/recrutamento`) é a única fonte de configuração do
+fluxo de `/recrutar` do bot — não existe comando equivalente no Discord. Ela
+escreve `recruitmentConfigs/{guildId}` no Firestore, documento que o bot lê a
+cada recrutamento: cargos de iniciante, áreas (cada uma com 1..n cargos e
+pontuação), canal da ficha, cargos que aprovam, cargos que podem dar pontos e
+**todas** as mensagens — layout (`embed`/`container`), título, texto, cor,
+imagem e os botões com emoji.
+
+O bot congela essa configuração no momento do `/recrutar`, então salvar aqui
+vale para os **próximos** recrutamentos: wizards em andamento e fichas já
+enviadas mantêm o formato com que nasceram.
+
 ## Verificação
 
 ```bash

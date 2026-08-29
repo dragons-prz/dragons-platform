@@ -8,6 +8,7 @@ import { registerConfigRoutes } from "./routes/config.js";
 import { registerGuildRoutes } from "./routes/guild.js";
 import { registerPanelRoutes } from "./routes/panels.js";
 import { registerPresenceRoutes } from "./routes/presence.js";
+import { registerRecruitmentConfigRoutes } from "./routes/recruitment-config.js";
 import { registerSupportCategoryRoutes } from "./routes/support-categories.js";
 import { registerStaticClient } from "./static.js";
 import { logger } from "./utils/logger.js";
@@ -39,6 +40,7 @@ async function main(): Promise<void> {
     registerConfigRoutes(protectedApp, env);
     registerGuildRoutes(protectedApp, env);
     registerSupportCategoryRoutes(protectedApp, env);
+    registerRecruitmentConfigRoutes(protectedApp, env);
     registerPresenceRoutes(protectedApp);
   });
 

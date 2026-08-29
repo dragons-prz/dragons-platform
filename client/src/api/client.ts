@@ -32,7 +32,7 @@ export async function apiGet<T>(path: string, signal?: AbortSignal): Promise<T> 
 
 async function apiSend<T>(
   path: string,
-  method: "POST" | "PATCH" | "DELETE",
+  method: "POST" | "PUT" | "PATCH" | "DELETE",
   body: unknown,
   signal?: AbortSignal
 ): Promise<T> {
@@ -72,6 +72,11 @@ async function handleResponse<T>(response: Response): Promise<T> {
 /** POST autenticado — usado para criar recursos. */
 export function apiPost<T>(path: string, body: unknown, signal?: AbortSignal): Promise<T> {
   return apiSend<T>(path, "POST", body, signal);
+}
+
+/** PUT autenticado — usado para substituir um recurso inteiro. */
+export function apiPut<T>(path: string, body: unknown, signal?: AbortSignal): Promise<T> {
+  return apiSend<T>(path, "PUT", body, signal);
 }
 
 /** PATCH autenticado — usado para atualizar campos parciais de um recurso. */
