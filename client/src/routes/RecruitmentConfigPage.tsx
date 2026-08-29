@@ -171,6 +171,12 @@ function RecruitmentForm({
           para os <strong>próximos</strong> recrutamentos — wizards em andamento e fichas já
           enviadas mantêm o formato com que nasceram.
         </p>
+        <p className="font-body text-sm text-ink-muted">
+          As três etapas e os desfechos são a <strong>mesma</strong> mensagem, editada a cada passo
+          — e o Discord não deixa uma mensagem trocar de formato depois de enviada. Por isso o
+          formato da <strong>etapa 1</strong> vale para todo o wizard. A ficha é outra mensagem e
+          tem formato próprio.
+        </p>
       </div>
 
       <div className="flex flex-wrap gap-2" role="tablist" aria-label="Seções da configuração">

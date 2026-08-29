@@ -126,9 +126,13 @@ Transversal:
   recrutamentos; wizards em andamento e fichas já enviadas mantêm o formato
   atual". Sem botão de "republicar" — diferente do editor de painel, aqui não
   existe mensagem publicada para atualizar.
-- Etapas podem ter layouts diferentes entre si sem nenhum efeito colateral: o
-  bot escolhe o layout de cada etapa a partir do snapshot do próprio
-  recrutamento.
+- **Aviso de layout no wizard**: as três etapas e os desfechos vivem na _mesma_
+  mensagem, editada a cada passo, e o Discord não deixa editar uma mensagem
+  alternando entre embed e Components V2. Por isso o layout da **etapa 1** vale
+  para todas as mensagens do wizard; o bot normaliza a divergência e loga
+  `recruitment.layout_normalized`. A ficha é outra mensagem e tem layout
+  próprio (que também manda nos seus estados enfileirada/aprovada/rejeitada).
+  A UI mostra isso ao lado do seletor de formato das etapas 2, 3 e desfechos.
 
 Os pickers de cargo/canal já existem para `SettingsPage` e para as categorias
 de suporte — reusar, não duplicar.
