@@ -147,6 +147,28 @@ tipos.
 Este PR entra **antes** do PR do `dragonsbot`, para existir configuração real
 com que testar o fluxo. Os tipos das duas pontas precisam ser idênticos.
 
+## Pós-implementação: remoção de `recruitmentCreditWindowHours`
+
+Depois de mergeado, um bug relatado no bot expôs que a janela de crédito
+(`credit-window-hours`, default 24h) bloqueava o caso de uso real do fluxo
+novo: recrutar alguém que já está no servidor para uma área nova (não
+necessariamente a família). Como toda ficha já passa por aprovação manual de
+um cargo aprovador, a janela era redundante — decisão: **removida**, não só
+desativada.
+
+Removido daqui: `NumberConfigKey["credit-window-hours"]`,
+`GUILD_CONFIG_DEFAULTS.recruitmentCreditWindowHours` e
+`GuildConfig.recruitmentCreditWindowHours` (`shared/src/guild-config.ts`),
+`EDITABLE_NUMBER_KEYS`/`UpdateGuildConfigRequest.recruitmentCreditWindowHours`
+(`shared/src/guild-config-api.ts`), o default e a chave gravável em
+`server/src/firestore/guild-config-repository.ts`, e o campo "Janela de
+crédito (horas)" em `client/src/routes/SettingsPage.tsx`. Espelho exato do
+que saiu de `dragonsbot/src/domain/types.ts` e
+`FirestoreDragonsStore.ts` — ver a spec canônica.
+
+Documentos antigos em `guildConfigs/{guildId}` continuam com o campo gravado
+no Firestore (sem migração); é inofensivo, nenhum dos dois lados o lê mais.
+
 ## Validação
 
 `npm run check` (format + lint + typecheck + build). Sem suíte automatizada;

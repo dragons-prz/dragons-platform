@@ -70,7 +70,6 @@ interface FormState {
   memberExitChannelId: string;
   /** Mantidos como string (input controlado); convertidos para número no patch. */
   recruitmentPoints: string;
-  recruitmentCreditWindowHours: string;
 }
 
 function toFormState(config: GuildConfig): FormState {
@@ -83,8 +82,7 @@ function toFormState(config: GuildConfig): FormState {
     blacklistLogChannelId: config.blacklistLogChannelId,
     memberVerificationChannelId: config.memberVerificationChannelId,
     memberExitChannelId: config.memberExitChannelId,
-    recruitmentPoints: String(config.recruitmentPoints),
-    recruitmentCreditWindowHours: String(config.recruitmentCreditWindowHours)
+    recruitmentPoints: String(config.recruitmentPoints)
   };
 }
 
@@ -117,12 +115,6 @@ function buildPatch(saved: FormState, form: FormState): UpdateGuildConfigRequest
   }
   if (form.recruitmentPoints !== saved.recruitmentPoints && isValidCount(form.recruitmentPoints)) {
     patch.recruitmentPoints = Number(form.recruitmentPoints);
-  }
-  if (
-    form.recruitmentCreditWindowHours !== saved.recruitmentCreditWindowHours &&
-    isValidCount(form.recruitmentCreditWindowHours)
-  ) {
-    patch.recruitmentCreditWindowHours = Number(form.recruitmentCreditWindowHours);
   }
   return patch;
 }
@@ -163,8 +155,7 @@ function SettingsForm({
     form.blacklistLogChannelId !== "" &&
     form.memberVerificationChannelId !== "" &&
     form.memberExitChannelId !== "";
-  const numbersValid =
-    isValidCount(form.recruitmentPoints) && isValidCount(form.recruitmentCreditWindowHours);
+  const numbersValid = isValidCount(form.recruitmentPoints);
   const canSave = saveState !== "saving" && isDirty && requiredFilled && numbersValid;
 
   function set<K extends keyof FormState>(key: K, value: string) {
@@ -295,12 +286,6 @@ function SettingsForm({
           hint="Pontos creditados ao recrutador quando um recrutamento é aprovado."
           value={form.recruitmentPoints}
           onChange={(value) => set("recruitmentPoints", value)}
-        />
-        <NumberField
-          label="Janela de crédito (horas)"
-          hint="Prazo após a entrada em que ainda cabe pedir crédito de recrutamento."
-          value={form.recruitmentCreditWindowHours}
-          onChange={(value) => set("recruitmentCreditWindowHours", value)}
         />
       </section>
 
