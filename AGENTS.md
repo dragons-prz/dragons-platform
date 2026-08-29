@@ -31,10 +31,12 @@ Workspaces npm: os três pacotes vivem em `package.json` na raiz sob
 
 ## Regra crítica: tipos em `shared/` são espelho do bot
 
-Os tipos em `shared/src/panel.ts` e `shared/src/guild-config.ts` são cópias
-deliberadas de `dragonsbot/src/domain/types.ts` (`PanelConfig`,
+Os tipos em `shared/src/panel.ts`, `shared/src/guild-config.ts`,
+`shared/src/support-category.ts` e `shared/src/recruitment-config.ts` são
+cópias deliberadas de `dragonsbot/src/domain/types.ts` (`PanelConfig`,
 `PanelButtonConfig`, `PanelButtonStyle`, `GuildConfig`, `RoleConfigKey`,
-`ChannelConfigKey`). Eles descrevem o formato dos mesmos documentos no
+`ChannelConfigKey`, `SupportCategoryConfig`, `RecruitmentFlowConfig` e os
+tipos que ela compõe). Eles descrevem o formato dos mesmos documentos no
 Firestore que o bot lê e escreve.
 
 **Qualquer alteração de forma nesses tipos (campos, tipos, valores

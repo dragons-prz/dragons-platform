@@ -26,6 +26,7 @@ export type PresenceLocation =
   | "settings"
   | "support-categories"
   | "support-category-new"
+  | "recruitment"
   | `panel:${string}`
   | `support-category:${string}`
   | "unknown";
