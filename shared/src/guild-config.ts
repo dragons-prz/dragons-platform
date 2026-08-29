@@ -12,7 +12,7 @@
 
 export type RoleConfigKey = "recruiter" | "founder" | "member";
 export type ChannelConfigKey = "approval" | "recruitment" | "blacklist" | "verification" | "exit";
-export type NumberConfigKey = "points" | "credit-window-hours";
+export type NumberConfigKey = "points";
 
 /**
  * Valores padrao dos campos opcionais-na-pratica do `guildConfigs/{guildId}`,
@@ -27,8 +27,7 @@ export const GUILD_CONFIG_DEFAULTS = {
   blacklistLogChannelId: "1541992716496273478",
   memberVerificationChannelId: "1534723901421256784",
   memberExitChannelId: "1534735482460831884",
-  recruitmentPoints: 8,
-  recruitmentCreditWindowHours: 24
+  recruitmentPoints: 8
 } as const;
 
 export interface GuildConfig {
@@ -45,7 +44,5 @@ export interface GuildConfig {
   memberExitChannelId: string;
   /** Pontos creditados ao recrutador quando um recrutamento e aprovado. */
   recruitmentPoints: number;
-  /** Janela (horas) apos a entrada em que ainda cabe pedir credito de recrutamento. */
-  recruitmentCreditWindowHours: number;
   hierarchySeeded: boolean;
 }

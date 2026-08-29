@@ -49,8 +49,6 @@ function normalizeGuildConfig(guildId: string, data: Partial<GuildConfig>): Guil
       data.memberVerificationChannelId ?? GUILD_CONFIG_DEFAULTS.memberVerificationChannelId,
     memberExitChannelId: data.memberExitChannelId ?? GUILD_CONFIG_DEFAULTS.memberExitChannelId,
     recruitmentPoints: data.recruitmentPoints ?? GUILD_CONFIG_DEFAULTS.recruitmentPoints,
-    recruitmentCreditWindowHours:
-      data.recruitmentCreditWindowHours ?? GUILD_CONFIG_DEFAULTS.recruitmentCreditWindowHours,
     hierarchySeeded: data.hierarchySeeded ?? false
   };
 }
@@ -87,7 +85,6 @@ export interface GuildConfigUpdate {
   memberVerificationChannelId?: string;
   memberExitChannelId?: string;
   recruitmentPoints?: number;
-  recruitmentCreditWindowHours?: number;
 }
 
 const WRITABLE_KEYS = [
@@ -99,8 +96,7 @@ const WRITABLE_KEYS = [
   "blacklistLogChannelId",
   "memberVerificationChannelId",
   "memberExitChannelId",
-  "recruitmentPoints",
-  "recruitmentCreditWindowHours"
+  "recruitmentPoints"
 ] as const;
 
 /**

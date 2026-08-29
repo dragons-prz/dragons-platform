@@ -23,7 +23,7 @@ export const REQUIRED_CHANNEL_KEYS = [
 ] as const;
 
 /** Chaves numericas editaveis (inteiro >= 1). */
-export const EDITABLE_NUMBER_KEYS = ["recruitmentPoints", "recruitmentCreditWindowHours"] as const;
+export const EDITABLE_NUMBER_KEYS = ["recruitmentPoints"] as const;
 
 /**
  * Campos aceitos em `PATCH /api/config`. Todos opcionais — envie so o que
@@ -40,7 +40,6 @@ export interface UpdateGuildConfigRequest {
   memberVerificationChannelId?: string;
   memberExitChannelId?: string;
   recruitmentPoints?: number;
-  recruitmentCreditWindowHours?: number;
 }
 
 /**
