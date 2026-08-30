@@ -8,7 +8,7 @@ instruções completas — `CLAUDE.md` e equivalentes apenas apontam para cá.
 
 Painel web administrativo para o bot de Discord Dragons (repositório
 irmão: `~/dev/dragonsbot`). Permite que founders/admins de um servidor
-Discord criem "painéis" (mensagens com embed + imagem + até 25 botões) com
+Discord criem "painéis" (mensagens Components V2 montadas por blocos) com
 pré-visualização fiel ao Discord, publiquem em canais e configurem cargos e
 canais do bot. O painel lê e escreve no **mesmo** Firestore que o bot já
 usa — não é um banco de dados separado.
@@ -34,11 +34,14 @@ Workspaces npm: os três pacotes vivem em `package.json` na raiz sob
 Os tipos em `shared/src/panel.ts`, `shared/src/guild-config.ts`,
 `shared/src/support-category.ts` e `shared/src/recruitment-config.ts` são
 cópias deliberadas de `dragonsbot/src/domain/types.ts` (`PanelConfig`,
-`PanelButtonConfig`, `PanelButtonStyle`, `GuildConfig`, `RoleConfigKey`,
-`ChannelConfigKey`, `SupportCategoryConfig`, `RecruitmentFlowConfig`
-— incluindo `RecruitmentVerificationTicketConfig` e `RecruitmentRouteConfig`
-— e os tipos que ela compõe; `PanelKind` inclui `"text"`). Eles descrevem o
-formato dos mesmos documentos no Firestore que o bot lê e escreve.
+`PanelBlock` e os blocos que ela compõe, `PanelButtonConfig`,
+`PanelButtonStyle`, `GuildConfig`, `RoleConfigKey`, `ChannelConfigKey`,
+`SupportCategoryConfig`, `RecruitmentFlowConfig` — incluindo
+`RecruitmentVerificationTicketConfig` e `RecruitmentRouteConfig` — e os
+tipos que ela compõe). Eles descrevem o formato dos mesmos documentos no
+Firestore que o bot lê e escreve. `panel-migrate.ts`
+(`panelBlocksFromLegacy`) também é espelho: a migração de leitura precisa
+produzir a mesma lista de blocos nos dois repos.
 
 **Qualquer alteração de forma nesses tipos (campos, tipos, valores
 possíveis) precisa ser feita nos DOIS repositórios ao mesmo tempo** —

@@ -1,28 +1,20 @@
 import type {
   CreatePanelRequest,
   PanelActionConfig,
-  PanelButtonConfig,
-  PanelButtonInput,
-  PanelKind,
-  PanelLayout,
+  PanelBlock,
+  PanelBlockInput,
   PanelPublishStatusResponse,
-  PanelSelectConfig,
   PublishPanelRequest,
   PublishPanelResponse,
   UpdatePanelRequest,
   UpdatePanelResponse
 } from "@dragons/shared";
 import {
-  assignButtonIds,
-  assignSelectIds,
+  assignBlockIds,
   resolveButtonAction,
-  validateButtons,
+  validateBlocks,
   validateColor,
-  validateDescription,
-  validateImageUrl,
   validatePanelId,
-  validatePanelLayout,
-  validateSelect,
   validateTitle
 } from "@dragons/shared";
 import type { FastifyInstance } from "fastify";
@@ -79,7 +71,6 @@ export function registerPanelRoutes(app: FastifyInstance, env: AppEnv): void {
       const body = request.body ?? {};
       const id = typeof body.id === "string" ? body.id.trim() : "";
       const title = typeof body.title === "string" ? body.title : "";
-      const description = typeof body.description === "string" ? body.description : "";
 
       const idError = validatePanelId(id);
       if (idError) throw new ValidationError(idError);
@@ -87,10 +78,7 @@ export function registerPanelRoutes(app: FastifyInstance, env: AppEnv): void {
       const titleError = validateTitle(title);
       if (titleError) throw new ValidationError(titleError);
 
-      const descriptionError = validateDescription(description);
-      if (descriptionError) throw new ValidationError(descriptionError);
-
-      const panel = await createPanel(env, env.discordGuildId, id, title, description);
+      const panel = await createPanel(env, env.discordGuildId, id, title);
       logger.info("panel.created", {
         guildId: env.discordGuildId,
         panelId: id,
@@ -121,36 +109,7 @@ export function registerPanelRoutes(app: FastifyInstance, env: AppEnv): void {
           return reply.code(404).send({ error: `Painel "${id}" nao encontrado.` });
         }
 
-        const patch: {
-          title?: string;
-          description?: string;
-          imageUrl?: string | null;
-          color?: string | null;
-          kind?: PanelKind;
-          layout?: PanelLayout;
-          buttons?: PanelButtonConfig[];
-          select?: PanelSelectConfig | null;
-        } = {};
-
-        if (body.title !== undefined) {
-          const error = validateTitle(body.title);
-          if (error) throw new ValidationError(error);
-          patch.title = body.title;
-        }
-
-        if (body.description !== undefined) {
-          const error = validateDescription(body.description);
-          if (error) throw new ValidationError(error);
-          patch.description = body.description;
-        }
-
-        if (body.imageUrl !== undefined) {
-          if (body.imageUrl !== null) {
-            const error = validateImageUrl(body.imageUrl);
-            if (error) throw new ValidationError(error);
-          }
-          patch.imageUrl = body.imageUrl;
-        }
+        const patch: { color?: string | null; blocks?: PanelBlock[] } = {};
 
         if (body.color !== undefined) {
           if (body.color !== null) {
@@ -160,68 +119,25 @@ export function registerPanelRoutes(app: FastifyInstance, env: AppEnv): void {
           patch.color = body.color;
         }
 
-        if (body.kind !== undefined) {
-          if (body.kind !== "buttons" && body.kind !== "select" && body.kind !== "text") {
-            throw new ValidationError(
-              'O tipo do painel precisa ser "buttons", "select" ou "text".'
-            );
-          }
-          patch.kind = body.kind;
+        if (body.blocks !== undefined) {
+          const blocks: PanelBlockInput[] = body.blocks;
+          const blocksError = validateBlocks(blocks);
+          if (blocksError) throw new ValidationError(blocksError);
+          patch.blocks = assignBlockIds(existing.blocks, blocks);
         }
 
-        if (body.layout !== undefined) {
-          patch.layout = body.layout;
-        }
-
-        if (body.buttons !== undefined) {
-          const buttons: PanelButtonInput[] = body.buttons;
-          const buttonsError = validateButtons(buttons);
-          if (buttonsError) throw new ValidationError(buttonsError);
-          patch.buttons = assignButtonIds(existing.buttons, buttons);
-        }
-
-        if (body.select !== undefined) {
-          if (body.select === null) {
-            patch.select = null;
-          } else {
-            const selectError = validateSelect(body.select);
-            if (selectError) throw new ValidationError(selectError);
-            patch.select = assignSelectIds(existing.select, body.select);
-          }
-        }
-
-        // Consistencia entre `kind` e o conteudo (usa o valor final apos o
-        // patch, nao so o que veio no body).
-        const finalKind = patch.kind ?? existing.kind;
-        const finalSelect = patch.select !== undefined ? patch.select : existing.select;
-        const finalButtons = patch.buttons ?? existing.buttons;
-
-        const finalLayout = patch.layout ?? existing.layout;
-        const layoutError = validatePanelLayout(finalLayout, {
-          title: patch.title ?? existing.title,
-          description: patch.description ?? existing.description
-        });
-        if (layoutError) throw new ValidationError(layoutError);
-
-        if (finalKind === "select" && (!finalSelect || finalSelect.options.length === 0)) {
-          throw new ValidationError(
-            "Um painel do tipo dropdown precisa de ao menos uma opção. Adicione opções antes de trocar o tipo."
-          );
-        }
-
-        // Painel `text` nao tem dropdown: zera o `select` se o painel tinha
-        // um (ao vir de `select`). Botoes continuam validos, so nao sao
-        // obrigatorios.
-        if (finalKind === "text" && finalSelect) {
-          patch.select = null;
-        }
+        const finalBlocks = patch.blocks ?? existing.blocks;
 
         // Toda acao `run` que aponta para uma categoria de suporte precisa
         // referenciar uma categoria que existe de fato.
-        await assertSupportCategoriesExist(env, [
-          ...finalButtons.map((button) => resolveButtonAction(button)),
-          ...(finalKind === "select" && finalSelect ? finalSelect.options.map((o) => o.action) : [])
-        ]);
+        await assertSupportCategoriesExist(
+          env,
+          finalBlocks.flatMap((block) => {
+            if (block.type === "buttons") return block.buttons.map((b) => resolveButtonAction(b));
+            if (block.type === "select") return block.options.map((o) => o.action);
+            return [];
+          })
+        );
 
         const panel = await updatePanel(env, env.discordGuildId, id, patch);
         logger.info("panel.updated", {
@@ -280,13 +196,8 @@ export function registerPanelRoutes(app: FastifyInstance, env: AppEnv): void {
           return reply.code(404).send({ error: `Painel "${id}" nao encontrado.` });
         }
 
-        // Painel `text` pode ser publicado so com a mensagem (botoes
-        // opcionais). `buttons` e `select` exigem conteudo.
-        if (panel.kind === "select" && (!panel.select || panel.select.options.length === 0)) {
-          throw new ValidationError("Adicione ao menos uma opção ao dropdown antes de publicar.");
-        }
-        if (panel.kind === "buttons" && panel.buttons.length === 0) {
-          throw new ValidationError("Adicione ao menos um botão antes de publicar.");
+        if (panel.blocks.length === 0) {
+          throw new ValidationError("Adicione ao menos um bloco antes de publicar.");
         }
 
         const job = await createPanelJob(env, {

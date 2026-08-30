@@ -8,8 +8,8 @@ import { getPanelActionSpec } from "@dragons/shared";
 import { useState } from "react";
 
 import { buttonStyleColors, discordColors, discordFontFamily } from "./colors";
-import { renderButtonEmoji, renderDiscordText } from "./emoji";
-import { renderInline, renderMarkdown } from "./markdown";
+import { renderButtonEmoji } from "./emoji";
+import { renderMarkdown } from "./markdown";
 
 // `min(...)` para nao estourar a largura da tela no mobile.
 const PREVIEW_MAX_WIDTH = "min(32rem, 100%)";
@@ -29,22 +29,23 @@ function chunkIntoRows(buttons: PanelButtonConfig[]): PanelButtonConfig[][] {
 }
 
 /**
- * Pre-visualizacao fiel de um painel (embed + botoes) como apareceria no
- * Discord. Cores/tipografia sao literais de `discord-preview/colors.ts` —
- * nunca os tokens do painel. Clicar num botao mostra abaixo a
- * pre-visualizacao da resposta efemera que o membro receberia, agora
- * tambem como um embed (barra lateral colorida + imagem opcional).
+ * Pre-visualizacao fiel de um painel (Container / Components V2) como
+ * apareceria no Discord. O painel e uma lista de blocos — texto, imagem,
+ * separador, linha(s) de botoes, dropdown — renderados na ordem. Cores e
+ * tipografia sao literais de `discord-preview/colors.ts`, nunca os tokens
+ * do painel.
  *
- * `panel.color` (e `button.responseColor` na resposta efemera) definem a
- * cor real da barra lateral do embed, exatamente como o bot passa a fazer
- * via `.setColor()`. Sem cor definida, a barra usa o mesmo neutro
- * (`embedAccentDefault`) que o proprio Discord desenha para qualquer embed
- * sem cor customizada.
+ * Clicar num botao mostra abaixo a resposta efemera (so para acoes
+ * `reply`). `panel.color` = cor da barra lateral do Container.
  */
 export function DiscordPanelPreview({ panel }: { panel: PanelConfig }) {
   const [activeButtonId, setActiveButtonId] = useState<string | null>(null);
-  const rows = panel.kind === "select" ? [] : chunkIntoRows(panel.buttons);
-  const activeButton = panel.buttons.find((button) => button.id === activeButtonId) ?? null;
+
+  const allButtons = panel.blocks.flatMap((block) =>
+    block.type === "buttons" ? block.buttons : []
+  );
+  const activeButton = allButtons.find((button) => button.id === activeButtonId) ?? null;
+  const totalButtons = allButtons.length;
 
   return (
     <div
@@ -60,78 +61,94 @@ export function DiscordPanelPreview({ panel }: { panel: PanelConfig }) {
           }}
         />
         <div
-          className="flex flex-1 flex-col gap-2"
+          className="flex flex-1 flex-col"
           style={{
             backgroundColor: discordColors.embedSurface,
-            padding: panel.layout === "container" ? 0 : 16,
+            padding: 16,
+            gap: 12,
             color: discordColors.embedText,
             fontSize: "15px",
             lineHeight: 1.45,
             overflowWrap: "anywhere"
           }}
         >
-          {panel.layout === "container" && panel.imageUrl ? (
-            <img src={panel.imageUrl} alt="" style={{ width: "100%", display: "block" }} />
+          {panel.blocks.length === 0 ? (
+            <span style={{ opacity: 0.6, fontStyle: "italic" }}>
+              Nada para mostrar — adicione um bloco.
+            </span>
           ) : null}
 
-          <div
-            className="flex flex-col gap-1"
-            style={{ padding: panel.layout === "container" ? "12px 16px" : 0 }}
-          >
-            <div
-              style={{
-                color: discordColors.embedTitle,
-                fontWeight: 700,
-                fontSize: panel.layout === "container" ? "20px" : "16px",
-                lineHeight: 1.3
-              }}
-            >
-              {panel.layout === "container"
-                ? renderInline(panel.title, "title")
-                : renderDiscordText(panel.title)}
-            </div>
-
-            <div>{renderMarkdown(panel.description, "desc")}</div>
-
-            {panel.layout !== "container" && panel.imageUrl ? (
-              <img
-                src={panel.imageUrl}
-                alt=""
-                className="mt-1 rounded"
-                style={{ maxWidth: "100%", display: "block" }}
-              />
-            ) : null}
-          </div>
+          {panel.blocks.map((block, index) => {
+            const key = `b-${index}`;
+            if (block.type === "text") {
+              return <div key={key}>{renderMarkdown(block.content, key)}</div>;
+            }
+            if (block.type === "image") {
+              return block.url ? (
+                <img key={key} src={block.url} alt="" style={{ width: "100%", display: "block" }} />
+              ) : (
+                <div
+                  key={key}
+                  style={{
+                    height: 90,
+                    borderRadius: 6,
+                    display: "grid",
+                    placeItems: "center",
+                    fontSize: "12px",
+                    opacity: 0.6,
+                    backgroundColor: discordColors.messageSurface
+                  }}
+                >
+                  imagem sem URL
+                </div>
+              );
+            }
+            if (block.type === "separator") {
+              return (
+                <hr
+                  key={key}
+                  style={{
+                    border: 0,
+                    borderTop: `1px solid ${
+                      block.divider ? discordColors.embedAccentDefault : "transparent"
+                    }`,
+                    margin: block.spacing === "large" ? "6px 0" : 0
+                  }}
+                />
+              );
+            }
+            if (block.type === "select") {
+              return (
+                <SelectPreview key={key} placeholder={block.placeholder} options={block.options} />
+              );
+            }
+            const rows = chunkIntoRows(block.buttons);
+            return (
+              <div key={key} className="flex flex-col gap-2">
+                {rows.map((row, rowIndex) => (
+                  <div key={rowIndex} className="flex flex-wrap gap-2">
+                    {row.map((button) => (
+                      <PreviewButton
+                        key={button.id}
+                        button={button}
+                        isActive={button.id === activeButtonId}
+                        onClick={() =>
+                          setActiveButtonId((current) => (current === button.id ? null : button.id))
+                        }
+                      />
+                    ))}
+                  </div>
+                ))}
+              </div>
+            );
+          })}
         </div>
       </div>
 
-      {panel.kind === "select" && panel.select ? (
-        <SelectPreview placeholder={panel.select.placeholder} options={panel.select.options} />
-      ) : null}
-
-      {rows.length > 0 ? (
-        <div className="mt-3 flex flex-col gap-2">
-          {rows.map((row, rowIndex) => (
-            <div key={rowIndex} className="flex flex-wrap gap-2">
-              {row.map((button) => (
-                <PreviewButton
-                  key={button.id}
-                  button={button}
-                  isActive={button.id === activeButtonId}
-                  onClick={() =>
-                    setActiveButtonId((current) => (current === button.id ? null : button.id))
-                  }
-                />
-              ))}
-            </div>
-          ))}
-        </div>
-      ) : null}
-
-      {panel.buttons.length > MAX_BUTTONS_TOTAL ? (
+      {totalButtons > MAX_BUTTONS_TOTAL ? (
         <p className="mt-2 font-body text-xs text-danger">
-          Este painel tem {panel.buttons.length} botoes, mas o Discord permite no maximo{" "}
-          {MAX_BUTTONS_TOTAL} (5 por linha, 5 linhas). Os excedentes nao seriam publicados.
+          Este painel tem {totalButtons} botões, mas o Discord permite no máximo {MAX_BUTTONS_TOTAL}
+          . Os excedentes não seriam publicados.
         </p>
       ) : null}
 

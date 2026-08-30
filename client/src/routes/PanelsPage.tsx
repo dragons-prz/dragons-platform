@@ -1,4 +1,4 @@
-import type { PresenceUser } from "@dragons/shared";
+import type { PanelConfig, PresenceUser } from "@dragons/shared";
 import { parsePanelLocation } from "@dragons/shared";
 import { Link } from "react-router-dom";
 
@@ -10,6 +10,26 @@ import { ErrorScreen, LoadingScreen } from "../components/StatusScreen";
 import { useAuth } from "../context/AuthContext";
 import { usePresence, usePresenceLocation } from "../context/PresenceContext";
 import { useApiData } from "../hooks/useApiData";
+
+/** Primeiro bloco de texto do painel, sem o `## ` inicial — serve de "título" no card. */
+function panelTitle(panel: PanelConfig): string {
+  const first = panel.blocks.find((b) => b.type === "text");
+  const line = first && first.type === "text" ? first.content.split("\n")[0] : panel.id;
+  return line.replace(/^#{1,3}\s+/, "");
+}
+
+/** Resumo do resto do conteúdo textual para a segunda linha do card. */
+function panelBody(panel: PanelConfig): string {
+  const texts = panel.blocks.filter((b) => b.type === "text");
+  if (texts.length === 0) return "";
+  const rest = texts
+    .map((b) => (b.type === "text" ? b.content : ""))
+    .join(" ")
+    .replace(/^#{1,3}\s+\S+.*?(\n|$)/, "")
+    .replace(/[#>*`]/g, "")
+    .trim();
+  return rest || `${panel.blocks.length} blocos`;
+}
 
 export function PanelsPage() {
   usePresenceLocation("panels");
@@ -90,21 +110,17 @@ export function PanelsPage() {
                     ) : null}
                   </div>
                   <h2 className="line-clamp-2 font-display text-lg font-semibold text-ink">
-                    {renderInlineCompact(panel.title, `t-${panel.id}`)}
+                    {renderInlineCompact(panelTitle(panel), `t-${panel.id}`)}
                   </h2>
                   <p className="line-clamp-2 flex-1 font-body text-sm text-ink-muted">
-                    {renderInlineCompact(panel.description, `d-${panel.id}`)}
+                    {renderInlineCompact(panelBody(panel), `d-${panel.id}`)}
                   </p>
 
                   <div className="flex items-center gap-4 border-t border-line pt-3 font-body text-xs text-ink-muted">
                     <span>
-                      {panel.kind === "select"
-                        ? `${panel.select?.options.length ?? 0} ${
-                            (panel.select?.options.length ?? 0) === 1 ? "opção" : "opções"
-                          }`
-                        : `${panel.buttons.length} ${panel.buttons.length === 1 ? "botão" : "botões"}`}
+                      {panel.blocks.length} {panel.blocks.length === 1 ? "bloco" : "blocos"}
                     </span>
-                    {panel.imageUrl ? (
+                    {panel.blocks.some((b) => b.type === "image") ? (
                       <span className="flex items-center gap-1">
                         <ImageIcon className="h-4 w-4" />
                         Com imagem
