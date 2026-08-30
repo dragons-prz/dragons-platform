@@ -131,18 +131,35 @@ export interface RecruitmentSheetConfig {
 export type RecruitmentPointsMode = "sum" | "highest";
 
 /**
- * Configuracao do ticket de verificacao — a thread privada aberta pelo
- * botao "Verificar-se" de um painel (`actionId: "verification-ticket"`).
- * Escrita SO pela plataforma; o bot so le.
+ * Configuracao do ticket de verificacao — o formulario (modal do Discord) e
+ * a thread privada abertos pelo botao "Verificar-se" de um painel
+ * (`actionId: "verification-ticket"`). Escrita SO pela plataforma; o bot so
+ * le.
+ *
+ * O formulario tem exatamente 2 campos: **Idade** (texto) e
+ * **Veio por alguem?** (dropdown com os membros do cargo `recruiter` +
+ * "Nenhum"). Discord limita o titulo e cada label do modal a 45 caracteres.
  *
  * Spec: `docs/specs/2026-08-30-verificacao-recrutamento-por-ticket.md`.
  */
 export interface RecruitmentVerificationTicketConfig {
   /** Canal de texto onde nasce a thread privada. `null` = ticket nao configurado. */
   parentChannelId: string | null;
+  /** Titulo do modal aberto ao clicar em "Verificar-se" (max 45). */
+  formTitle: string;
+  /** Label do campo de idade (max 45). */
+  ageLabel: string;
+  /** Dica dentro do campo de idade (max 100). */
+  agePlaceholder: string;
+  /** Label do dropdown "Veio por alguem?" (max 45). */
+  recruiterPickerLabel: string;
+  /** Placeholder (texto de instrucao) do dropdown "Veio por alguem?". */
+  recruiterPickerPlaceholder: string;
+  /** Label da opcao "entrei por conta propria". */
+  noRecruiterLabel: string;
   /** Nome da thread. Vars: `{user}` `{date}` `{shortid}`. */
   threadNameTemplate: string;
-  /** Primeiro post da thread. Vars: `{user}` `{recruiter}`. */
+  /** Primeiro post da thread (idade e recrutador declarado vao logo abaixo). Vars: `{user}` `{recruiter}`. */
   openMessage: string;
   /** Post de escalonamento (menciona o cargo `recruiter`). Vars: `{user}`. */
   escalationMessage: string;
@@ -150,10 +167,6 @@ export interface RecruitmentVerificationTicketConfig {
   closeMessage: string;
   /** Minutos sem recrutamento ate marcar todo o cargo `recruiter`. */
   escalateAfterMinutes: number;
-  /** Placeholder do select "Veio por alguem?". */
-  recruiterPickerPlaceholder: string;
-  /** Label da opcao "entrei por conta propria". */
-  noRecruiterLabel: string;
 }
 
 /**
@@ -367,13 +380,17 @@ export const DEFAULT_RECRUITMENT_SHEET: RecruitmentSheetConfig = {
 
 export const DEFAULT_RECRUITMENT_VERIFICATION_TICKET: RecruitmentVerificationTicketConfig = {
   parentChannelId: null,
+  formTitle: "Verificacao",
+  ageLabel: "Idade",
+  agePlaceholder: "apenas numero, entre 14 e 49",
+  recruiterPickerLabel: "Veio por alguem?",
+  recruiterPickerPlaceholder: "Selecione quem indicou voce",
+  noRecruiterLabel: "Nenhum — entrei por conta propria",
   threadNameTemplate: "verificacao-{user}-{shortid}",
   openMessage: "Ola {user}! Um recrutador vai te atender por aqui.",
   escalationMessage: "{user} esta aguardando ha mais de 1h — alguem pode dar continuidade?",
   closeMessage: "Ticket de {user} encerrado por {closer}.",
-  escalateAfterMinutes: 60,
-  recruiterPickerPlaceholder: "Veio por alguem?",
-  noRecruiterLabel: "Nenhum — entrei por conta propria"
+  escalateAfterMinutes: 60
 };
 
 export const DEFAULT_RECRUITMENT_ROUTE: RecruitmentRouteConfig = {

@@ -61,10 +61,16 @@ O bot congela essa configuração no momento do `/recrutar`, então salvar aqui
 vale para os **próximos** recrutamentos: wizards em andamento e fichas já
 enviadas mantêm o formato com que nasceram.
 
-A aba **Ticket e rotas** configura o ticket de verificação (a thread privada
-aberta pelo botão "Verificar-se" de um painel) e para onde a ficha é
-encaminhada: a área marcada como **Família** manda a ficha para os Founders
-("Verificação das Posses"); qualquer outra área, para a Liderança de REC.
+A aba **Ticket e rotas** configura:
+
+- o **formulário de verificação** — o modal do Discord aberto ao clicar em
+  "Verificar-se", com dois campos: **Idade** (texto) e **Veio por alguém?**
+  (dropdown montado com os membros do cargo Recrutador + "Nenhum");
+- o **ticket** (thread privada) que nasce depois do envio do formulário;
+- o **roteamento da ficha**: a área marcada como **Família** manda a ficha
+  para os Founders ("Verificação das Posses"); qualquer outra, para a
+  Liderança de REC.
+
 Veja `docs/specs/2026-08-30-verificacao-recrutamento-por-ticket.md`.
 
 ## Painéis por blocos

@@ -95,6 +95,10 @@ function normalizeVerificationTicket(
 ): RecruitmentVerificationTicketConfig {
   return {
     parentChannelId: data?.parentChannelId ?? fallback.parentChannelId,
+    formTitle: data?.formTitle ?? fallback.formTitle,
+    ageLabel: data?.ageLabel ?? fallback.ageLabel,
+    agePlaceholder: data?.agePlaceholder ?? fallback.agePlaceholder,
+    recruiterPickerLabel: data?.recruiterPickerLabel ?? fallback.recruiterPickerLabel,
     threadNameTemplate: data?.threadNameTemplate ?? fallback.threadNameTemplate,
     openMessage: data?.openMessage ?? fallback.openMessage,
     escalationMessage: data?.escalationMessage ?? fallback.escalationMessage,

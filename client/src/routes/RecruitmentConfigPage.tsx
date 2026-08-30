@@ -567,6 +567,43 @@ function RecruitmentForm({
               </Section>
 
               <Section
+                title="Formulário de verificação"
+                hint='Ao clicar em "Verificar-se" o membro preenche este formulário (modal do Discord): campo de Idade + o dropdown "Veio por alguém?" (montado com os membros do cargo Recrutador + "Nenhum").'
+              >
+                <TextField
+                  label="Título do formulário (máx. 45)"
+                  value={form.verificationTicket.formTitle}
+                  onChange={(formTitle) =>
+                    update("verificationTicket", { ...form.verificationTicket, formTitle })
+                  }
+                />
+                <TextField
+                  label="Rótulo do campo de idade (máx. 45)"
+                  value={form.verificationTicket.ageLabel}
+                  onChange={(ageLabel) =>
+                    update("verificationTicket", { ...form.verificationTicket, ageLabel })
+                  }
+                />
+                <TextField
+                  label="Dica dentro do campo de idade"
+                  value={form.verificationTicket.agePlaceholder}
+                  onChange={(agePlaceholder) =>
+                    update("verificationTicket", { ...form.verificationTicket, agePlaceholder })
+                  }
+                />
+                <TextField
+                  label='Rótulo do dropdown "Veio por alguém?" (máx. 45)'
+                  value={form.verificationTicket.recruiterPickerLabel}
+                  onChange={(recruiterPickerLabel) =>
+                    update("verificationTicket", {
+                      ...form.verificationTicket,
+                      recruiterPickerLabel
+                    })
+                  }
+                />
+              </Section>
+
+              <Section
                 title="Rota da ficha"
                 hint="A área marcada como Família manda a ficha para os Founders; qualquer outra, para a Liderança de REC."
               >

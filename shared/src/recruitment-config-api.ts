@@ -269,7 +269,11 @@ function validateVerificationTicket(ticket: RecruitmentVerificationTicketConfig)
       ticket.noRecruiterLabel,
       'Ticket de verificação · opção "Nenhum"',
       RECRUITMENT_LIMITS.TICKET_LABEL_MAX
-    ]
+    ],
+    [ticket.formTitle, "Formulário · título", 45],
+    [ticket.ageLabel, "Formulário · rótulo do campo de idade", 45],
+    [ticket.agePlaceholder, "Formulário · dica do campo de idade", 100],
+    [ticket.recruiterPickerLabel, 'Formulário · rótulo do "Veio por alguém?"', 45]
   ];
   for (const [value, label, max] of texts) {
     const error = validateBoundedText(value, label, max);
