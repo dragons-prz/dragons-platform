@@ -1,12 +1,12 @@
 import { PANEL_ACTIONS } from "./panel-actions.js";
 import type {
   PanelActionConfig,
+  PanelBlock,
   PanelButtonConfig,
   PanelButtonStyle,
-  PanelSelectConfig,
   PanelSelectOption
 } from "./panel.js";
-import type { PanelButtonInput, PanelSelectInput, PanelSelectOptionInput } from "./panel-api.js";
+import type { PanelBlockInput, PanelButtonInput, PanelSelectOptionInput } from "./panel-api.js";
 
 /**
  * Limites reais impostos pelo Discord para embeds e botoes. Violar estes
@@ -28,7 +28,15 @@ export const PANEL_LIMITS = {
   CONTAINER_TEXT_MAX: 3900
 } as const;
 
-const VALID_LAYOUTS = ["embed", "container"] as const;
+/** Limites do painel em blocos (Components V2). */
+export const PANEL_BLOCK_LIMITS = {
+  MAX_BLOCKS: 12,
+  /** Soma de botoes de TODOS os blocos `buttons`. */
+  MAX_BUTTONS_TOTAL: 25,
+  /** Um TextDisplay do Container aceita ate 4000; folga para markdown. */
+  TEXT_MAX: 3900,
+  MAX_SELECT_BLOCKS: 1
+} as const;
 
 export const PANEL_ID_PATTERN = /^[a-z0-9-]{1,40}$/;
 
@@ -74,22 +82,13 @@ export function validatePanelId(id: string): string | null {
   return null;
 }
 
+/** Titulo inicial no `POST /api/panels` (vira o primeiro bloco de texto). */
 export function validateTitle(title: string): string | null {
   if (!title.trim()) {
     return "O título do painel não pode ficar vazio.";
   }
   if (title.length > PANEL_LIMITS.TITLE_MAX) {
     return `O título não pode ultrapassar ${PANEL_LIMITS.TITLE_MAX} caracteres (atual: ${title.length}).`;
-  }
-  return null;
-}
-
-export function validateDescription(description: string): string | null {
-  if (!description.trim()) {
-    return "A descrição do painel não pode ficar vazia.";
-  }
-  if (description.length > PANEL_LIMITS.DESCRIPTION_MAX) {
-    return `A descrição não pode ultrapassar ${PANEL_LIMITS.DESCRIPTION_MAX} caracteres (atual: ${description.length}).`;
   }
   return null;
 }
@@ -121,27 +120,6 @@ export function isEphemeralDiscordAttachmentUrl(url: string): boolean {
 export function validateColor(value: string): string | null {
   if (!HEX_COLOR_PATTERN.test(value)) {
     return "A cor deve estar no formato hexadecimal, como #E03131.";
-  }
-  return null;
-}
-
-/**
- * Valida o layout do painel e, para `container`, o limite combinado de
- * titulo + descricao (um unico `TextDisplay` do Components V2 aceita ate
- * 4000 caracteres). Retorna a mensagem de erro em portugues, ou `null`.
- */
-export function validatePanelLayout(
-  layout: string,
-  content: { title: string; description: string }
-): string | null {
-  if (!VALID_LAYOUTS.includes(layout as (typeof VALID_LAYOUTS)[number])) {
-    return 'O layout do painel precisa ser "embed" ou "container".';
-  }
-  if (layout === "container") {
-    const total = content.title.length + content.description.length;
-    if (total > PANEL_LIMITS.CONTAINER_TEXT_MAX) {
-      return `No layout Container, título + descrição somam no máximo ${PANEL_LIMITS.CONTAINER_TEXT_MAX} caracteres (atual: ${total}).`;
-    }
   }
   return null;
 }
@@ -210,12 +188,11 @@ export function validateAction(action: PanelActionConfig, label: string): string
   return `${label}: tipo de ação inválido.`;
 }
 
-/** Valida o array completo de botoes de um painel (limite de quantidade + cada campo). */
+/** Valida os botoes de um bloco `buttons` (forma de cada botao). O teto de 25 e global, em `validateBlocks`. */
 export function validateButtons(buttons: readonly PanelButtonInput[]): string | null {
-  if (buttons.length > PANEL_LIMITS.MAX_BUTTONS) {
-    return `Um painel pode ter no máximo ${PANEL_LIMITS.MAX_BUTTONS} botões (5 linhas de 5).`;
+  if (!Array.isArray(buttons) || buttons.length === 0) {
+    return "Um bloco de botões precisa de ao menos um botão.";
   }
-
   for (const button of buttons) {
     const label = button.label.trim();
     if (!label) {
@@ -230,12 +207,14 @@ export function validateButtons(buttons: readonly PanelButtonInput[]): string | 
     const actionError = validateAction(resolveButtonAction(button), `Botão "${label}"`);
     if (actionError) return actionError;
   }
-
   return null;
 }
 
-/** Valida o dropdown de um painel do tipo `select`. */
-export function validateSelect(select: PanelSelectInput): string | null {
+/** Valida um bloco `select` (placeholder + opcoes). */
+export function validateSelect(select: {
+  placeholder: string;
+  options: PanelSelectOptionInput[];
+}): string | null {
   if (typeof select.placeholder !== "string" || !select.placeholder.trim()) {
     return "O texto de instrução do dropdown não pode ficar vazio.";
   }
@@ -285,10 +264,11 @@ export function validateSelect(select: PanelSelectInput): string | null {
  */
 export function assignButtonIds(
   existingButtons: readonly PanelButtonConfig[],
-  inputs: readonly PanelButtonInput[]
+  inputs: readonly PanelButtonInput[],
+  /** Set de ids ja usados — compartilhado entre todos os blocos `buttons` do painel. */
+  usedIds: Set<string> = new Set<string>()
 ): PanelButtonConfig[] {
   const existingIds = new Set(existingButtons.map((button) => button.id));
-  const usedIds = new Set<string>();
 
   return inputs.map((input, index) => {
     let id = input.id && existingIds.has(input.id) && !usedIds.has(input.id) ? input.id : undefined;
@@ -328,10 +308,10 @@ export function assignButtonIds(
  */
 export function assignSelectOptionIds(
   existingOptions: readonly PanelSelectOption[],
-  inputs: readonly PanelSelectOptionInput[]
+  inputs: readonly PanelSelectOptionInput[],
+  usedIds: Set<string> = new Set<string>()
 ): PanelSelectOption[] {
   const existingIds = new Set(existingOptions.map((option) => option.id));
-  const usedIds = new Set<string>();
 
   return inputs.map((input, index) => {
     let id = input.id && existingIds.has(input.id) && !usedIds.has(input.id) ? input.id : undefined;
@@ -358,13 +338,106 @@ export function assignSelectOptionIds(
   });
 }
 
-/** Resolve os ids finais do dropdown inteiro (placeholder + opcoes). */
-export function assignSelectIds(
-  existing: PanelSelectConfig | null,
-  input: PanelSelectInput
-): PanelSelectConfig {
-  return {
-    placeholder: input.placeholder,
-    options: assignSelectOptionIds(existing?.options ?? [], input.options)
-  };
+/* ------------------------------------------------------------------ *
+ * Blocos
+ * ------------------------------------------------------------------ */
+
+const VALID_SPACING = ["small", "large"] as const;
+
+/**
+ * Valida a lista de blocos inteira. Retorna a 1a mensagem de erro em
+ * portugues, ou `null`.
+ */
+export function validateBlocks(blocks: readonly PanelBlockInput[]): string | null {
+  if (!Array.isArray(blocks)) return "Formato de blocos inválido.";
+  if (blocks.length === 0) return "O painel precisa de ao menos um bloco.";
+  if (blocks.length > PANEL_BLOCK_LIMITS.MAX_BLOCKS) {
+    return `Um painel pode ter no máximo ${PANEL_BLOCK_LIMITS.MAX_BLOCKS} blocos.`;
+  }
+
+  let totalButtons = 0;
+  let selectBlocks = 0;
+
+  for (let i = 0; i < blocks.length; i += 1) {
+    const block = blocks[i];
+    const at = `Bloco ${i + 1}`;
+    if (!block || typeof block !== "object") return `${at}: bloco inválido.`;
+
+    if (block.type === "text") {
+      if (typeof block.content !== "string" || !block.content.trim()) {
+        return `${at} (texto): o conteúdo não pode ficar vazio.`;
+      }
+      if (block.content.length > PANEL_BLOCK_LIMITS.TEXT_MAX) {
+        return `${at} (texto): no máximo ${PANEL_BLOCK_LIMITS.TEXT_MAX} caracteres (atual: ${block.content.length}).`;
+      }
+    } else if (block.type === "image") {
+      if (typeof block.url !== "string" || !block.url.trim()) {
+        return `${at} (imagem): informe a URL da imagem.`;
+      }
+      const err = validateImageUrl(block.url);
+      if (err) return `${at} (imagem): ${err.charAt(0).toLowerCase()}${err.slice(1)}`;
+    } else if (block.type === "separator") {
+      if (typeof block.divider !== "boolean") return `${at} (separador): opção de linha inválida.`;
+      if (!VALID_SPACING.includes(block.spacing)) {
+        return `${at} (separador): espaçamento precisa ser "small" ou "large".`;
+      }
+    } else if (block.type === "buttons") {
+      const err = validateButtons(block.buttons);
+      if (err) return `${at} (botões): ${err.charAt(0).toLowerCase()}${err.slice(1)}`;
+      totalButtons += block.buttons.length;
+    } else if (block.type === "select") {
+      selectBlocks += 1;
+      const err = validateSelect(block);
+      if (err) return `${at} (dropdown): ${err.charAt(0).toLowerCase()}${err.slice(1)}`;
+    } else {
+      return `${at}: tipo de bloco desconhecido.`;
+    }
+  }
+
+  if (totalButtons > PANEL_BLOCK_LIMITS.MAX_BUTTONS_TOTAL) {
+    return `O painel tem ${totalButtons} botões no total — o Discord permite no máximo ${PANEL_BLOCK_LIMITS.MAX_BUTTONS_TOTAL}.`;
+  }
+  if (selectBlocks > PANEL_BLOCK_LIMITS.MAX_SELECT_BLOCKS) {
+    return "Um painel pode ter no máximo um bloco de dropdown.";
+  }
+
+  return null;
+}
+
+/**
+ * Resolve os ids finais dos blocos ao salvar. Ids de botao sao unicos no
+ * PAINEL INTEIRO (viram `custom_id` publicado) — por isso o `Set` de ids
+ * usados e compartilhado entre todos os blocos `buttons`. Idem para as
+ * opcoes do (unico) bloco `select`.
+ *
+ * `existingBlocks` e o estado atual no Firestore: um botao/opcao so mantem
+ * seu id se ele ja existia por la.
+ */
+export function assignBlockIds(
+  existingBlocks: readonly PanelBlock[],
+  inputs: readonly PanelBlockInput[]
+): PanelBlock[] {
+  const existingButtons = existingBlocks.flatMap((b) => (b.type === "buttons" ? b.buttons : []));
+  const existingOptions = existingBlocks.flatMap((b) => (b.type === "select" ? b.options : []));
+  const usedButtonIds = new Set<string>();
+  const usedOptionIds = new Set<string>();
+
+  return inputs.map((input): PanelBlock => {
+    if (input.type === "text") return { type: "text", content: input.content };
+    if (input.type === "image") return { type: "image", url: input.url };
+    if (input.type === "separator") {
+      return { type: "separator", divider: input.divider, spacing: input.spacing };
+    }
+    if (input.type === "buttons") {
+      return {
+        type: "buttons",
+        buttons: assignButtonIds(existingButtons, input.buttons, usedButtonIds)
+      };
+    }
+    return {
+      type: "select",
+      placeholder: input.placeholder,
+      options: assignSelectOptionIds(existingOptions, input.options, usedOptionIds)
+    };
+  });
 }

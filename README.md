@@ -67,12 +67,20 @@ encaminhada: a área marcada como **Família** manda a ficha para os Founders
 ("Verificação das Posses"); qualquer outra área, para a Liderança de REC.
 Veja `docs/specs/2026-08-30-verificacao-recrutamento-por-ticket.md`.
 
-## Painel só de texto
+## Painéis por blocos
 
-Um painel pode ter `kind: "text"`: só a mensagem (título, descrição, imagem,
-cor, layout `embed`/`container`), com botões **opcionais**. É o formato dos
-painéis informativos (regras, avisos) e do painel de verificação, que leva
-um único botão "Verificar-se".
+Um painel é uma **lista ordenada de blocos** (`blocks: PanelBlock[]`),
+sempre renderizada como um Container (Components V2). Não há mais
+`layout: "embed"` nem `kind`. Tipos de bloco: **texto** (markdown, com
+barra de formatação e seletor de emojis do servidor), **banner** (imagem),
+**separador**, **botões** (linha de até 5, chunk automático) e **dropdown**
+(≤ 1 por painel). Você reordena arrastando — botão no meio da mensagem,
+banner no rodapé, vários blocos de texto com separadores.
+
+Painéis antigos (formato `title`/`description`/`buttons`/... no topo) são
+migrados na leitura para `[banner?, texto(título+descrição), botões|dropdown?]`
+— sem script, o documento só ganha `blocks` no próximo save.
+Veja `docs/specs/2026-08-31-painel-blocos.md`.
 
 ## Verificação
 

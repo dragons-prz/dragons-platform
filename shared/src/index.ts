@@ -1,5 +1,6 @@
 export * from "./panel.js";
 export * from "./panel-api.js";
+export * from "./panel-migrate.js";
 export * from "./panel-actions.js";
 export * from "./panel-validation.js";
 export * from "./recruitment-config.js";
