@@ -199,7 +199,8 @@ function PanelEditorForm({
   const colorError = color.length > 0 ? validateColor(color) : null;
   const buttonsInput = toButtonsInput(form.buttons);
   const selectInput = toSelectInput(form);
-  const buttonsError = form.kind === "buttons" ? validateButtons(buttonsInput) : null;
+  // `text` valida a FORMA dos botoes que existirem, mas nao exige nenhum.
+  const buttonsError = form.kind === "select" ? null : validateButtons(buttonsInput);
   const selectError = form.kind === "select" ? validateSelect(selectInput) : null;
   const layoutError = validatePanelLayout(form.layout, {
     title: form.title,
@@ -513,11 +514,19 @@ function PanelEditorForm({
               >
                 Dropdown
               </KindChip>
+              <KindChip
+                active={form.kind === "text"}
+                onClick={() => setForm((current) => ({ ...current, kind: "text" }))}
+              >
+                Somente texto
+              </KindChip>
             </div>
             <p className="font-body text-xs text-ink-muted">
               {form.kind === "select"
                 ? "Um único menu suspenso no lugar das linhas de botões. Cada opção dispara uma ação."
-                : "Até 25 botões em linhas de 5. Cada botão dispara uma ação."}
+                : form.kind === "text"
+                  ? "Painel informativo: só a mensagem. Botões são opcionais (adicione se quiser)."
+                  : "Até 25 botões em linhas de 5. Cada botão dispara uma ação."}
             </p>
           </div>
 

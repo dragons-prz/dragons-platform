@@ -28,7 +28,8 @@ import { AreaListEditor, StarterRoleListEditor } from "../recruitment-editor/Opt
 import { buildPreviewVars, sampleSelections } from "../recruitment-editor/preview-data";
 import { RecruitmentMessagePreview } from "../recruitment-editor/RecruitmentPreview";
 
-type TabId = "opcoes" | "etapa1" | "etapa2" | "etapa3" | "desfechos" | "ficha" | "permissoes";
+type TabId =
+  "opcoes" | "etapa1" | "etapa2" | "etapa3" | "desfechos" | "ficha" | "ticket" | "permissoes";
 
 const TABS: { id: TabId; label: string }[] = [
   { id: "opcoes", label: "Cargos e áreas" },
@@ -37,6 +38,7 @@ const TABS: { id: TabId; label: string }[] = [
   { id: "etapa3", label: "Etapa 3" },
   { id: "desfechos", label: "Desfechos" },
   { id: "ficha", label: "Ficha" },
+  { id: "ticket", label: "Ticket e rotas" },
   { id: "permissoes", label: "Permissões e pontos" }
 ];
 
@@ -117,12 +119,24 @@ function RecruitmentForm({
     setForm((current) => ({ ...current, [key]: value }));
   }
 
-  function toggleRole(key: "approverRoleIds" | "pointsGrantRoleIds", roleId: string) {
+  function toggleRole(
+    key: "approverRoleIds" | "pointsGrantRoleIds" | "pointsResetRoleIds",
+    roleId: string
+  ) {
     setForm((current) => {
       const set = new Set(current[key]);
       if (set.has(roleId)) set.delete(roleId);
       else set.add(roleId);
       return { ...current, [key]: [...set] };
+    });
+  }
+
+  function toggleRouteRole(route: "familyRoute" | "areaRoute", roleId: string) {
+    setForm((current) => {
+      const set = new Set(current[route].approverRoleIds);
+      if (set.has(roleId)) set.delete(roleId);
+      else set.add(roleId);
+      return { ...current, [route]: { ...current[route], approverRoleIds: [...set] } };
     });
   }
 
@@ -465,11 +479,173 @@ function RecruitmentForm({
             </>
           ) : null}
 
+          {tab === "ticket" ? (
+            <>
+              <Section
+                title="Ticket de verificação"
+                hint='A thread privada aberta pelo botão "Verificar-se" de um painel. A lista de recrutadores do "Veio por alguém?" é montada automaticamente pelos membros com o cargo de Recrutador.'
+              >
+                <ChannelField
+                  label="Canal onde a thread nasce"
+                  value={form.verificationTicket.parentChannelId}
+                  channels={channels}
+                  onChange={(parentChannelId) =>
+                    update("verificationTicket", {
+                      ...form.verificationTicket,
+                      parentChannelId
+                    })
+                  }
+                />
+                <TextField
+                  label="Nome da thread — {user} {date} {shortid}"
+                  value={form.verificationTicket.threadNameTemplate}
+                  onChange={(threadNameTemplate) =>
+                    update("verificationTicket", {
+                      ...form.verificationTicket,
+                      threadNameTemplate
+                    })
+                  }
+                />
+                <TextField
+                  label="Mensagem de abertura — {user} {recruiter}"
+                  value={form.verificationTicket.openMessage}
+                  onChange={(openMessage) =>
+                    update("verificationTicket", { ...form.verificationTicket, openMessage })
+                  }
+                />
+                <TextField
+                  label="Mensagem de escalonamento — {user}"
+                  value={form.verificationTicket.escalationMessage}
+                  onChange={(escalationMessage) =>
+                    update("verificationTicket", {
+                      ...form.verificationTicket,
+                      escalationMessage
+                    })
+                  }
+                />
+                <TextField
+                  label="Mensagem de encerramento — {user} {closer}"
+                  value={form.verificationTicket.closeMessage}
+                  onChange={(closeMessage) =>
+                    update("verificationTicket", { ...form.verificationTicket, closeMessage })
+                  }
+                />
+                <div className="flex flex-wrap gap-4">
+                  <NumberField
+                    label="Minutos até escalar"
+                    value={form.verificationTicket.escalateAfterMinutes}
+                    min={RECRUITMENT_LIMITS.ESCALATE_MINUTES_MIN}
+                    max={RECRUITMENT_LIMITS.ESCALATE_MINUTES_MAX}
+                    onChange={(escalateAfterMinutes) =>
+                      update("verificationTicket", {
+                        ...form.verificationTicket,
+                        escalateAfterMinutes
+                      })
+                    }
+                  />
+                </div>
+                <TextField
+                  label='Texto do "Veio por alguém?"'
+                  value={form.verificationTicket.recruiterPickerPlaceholder}
+                  onChange={(recruiterPickerPlaceholder) =>
+                    update("verificationTicket", {
+                      ...form.verificationTicket,
+                      recruiterPickerPlaceholder
+                    })
+                  }
+                />
+                <TextField
+                  label='Opção "entrei por conta própria"'
+                  value={form.verificationTicket.noRecruiterLabel}
+                  onChange={(noRecruiterLabel) =>
+                    update("verificationTicket", {
+                      ...form.verificationTicket,
+                      noRecruiterLabel
+                    })
+                  }
+                />
+              </Section>
+
+              <Section
+                title="Rota da ficha"
+                hint="A área marcada como Família manda a ficha para os Founders; qualquer outra, para a Liderança de REC."
+              >
+                <label className="flex flex-col gap-1">
+                  <span className="font-body text-xs font-medium text-ink-muted">
+                    Qual área é o "recrutamento para a Família"
+                  </span>
+                  <select
+                    value={form.familyAreaId ?? ""}
+                    onChange={(event) =>
+                      update("familyAreaId", event.target.value === "" ? null : event.target.value)
+                    }
+                    className={INPUT_CLASS}
+                  >
+                    <option value="">Nenhuma</option>
+                    {form.areas.map((area) => (
+                      <option key={area.id} value={area.id}>
+                        {area.label || area.id}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              </Section>
+
+              <Section
+                title="Rota Família → Verificação das Posses"
+                hint="Ficha de quem foi recrutado para a Família. Os cargos aqui são normalmente os Founders."
+              >
+                <ChannelField
+                  label="Canal da ficha (Família)"
+                  value={form.familyRoute.sheetChannelId}
+                  channels={channels}
+                  onChange={(sheetChannelId) =>
+                    update("familyRoute", { ...form.familyRoute, sheetChannelId })
+                  }
+                />
+                <div className="flex flex-col gap-1">
+                  <span className="font-body text-xs font-medium text-ink-muted">
+                    Cargos que confirmam
+                  </span>
+                  <RolePicker
+                    roles={roles}
+                    selected={form.familyRoute.approverRoleIds}
+                    onToggle={(roleId) => toggleRouteRole("familyRoute", roleId)}
+                  />
+                </div>
+              </Section>
+
+              <Section
+                title="Rota Área → Liderança de REC"
+                hint="Ficha de quem foi recrutado para uma área que não é a Família."
+              >
+                <ChannelField
+                  label="Canal da ficha (Área)"
+                  value={form.areaRoute.sheetChannelId}
+                  channels={channels}
+                  onChange={(sheetChannelId) =>
+                    update("areaRoute", { ...form.areaRoute, sheetChannelId })
+                  }
+                />
+                <div className="flex flex-col gap-1">
+                  <span className="font-body text-xs font-medium text-ink-muted">
+                    Cargos que confirmam
+                  </span>
+                  <RolePicker
+                    roles={roles}
+                    selected={form.areaRoute.approverRoleIds}
+                    onToggle={(roleId) => toggleRouteRole("areaRoute", roleId)}
+                  />
+                </div>
+              </Section>
+            </>
+          ) : null}
+
           {tab === "permissoes" ? (
             <>
               <Section
-                title="Quem aprova a ficha"
-                hint="Só estes cargos conseguem clicar em Confirmar ou Rejeitar."
+                title="Quem aprova a ficha (legado)"
+                hint="Fallback dos recrutamentos antigos. As rotas Família/Área, na aba Ticket e rotas, é o que vale para os novos."
               >
                 <RolePicker
                   roles={roles}
@@ -483,6 +659,17 @@ function RecruitmentForm({
                   roles={roles}
                   selected={form.pointsGrantRoleIds}
                   onToggle={(roleId) => toggleRole("pointsGrantRoleIds", roleId)}
+                />
+              </Section>
+
+              <Section
+                title="Quem pode resetar pontos"
+                hint="Cargos autorizados a usar /pontos-resetar. Vazio = usa os mesmos cargos de dar pontos."
+              >
+                <RolePicker
+                  roles={roles}
+                  selected={form.pointsResetRoleIds}
+                  onToggle={(roleId) => toggleRole("pointsResetRoleIds", roleId)}
                 />
               </Section>
 
@@ -577,6 +764,11 @@ function RecruitmentForm({
                   value={form.notConfiguredMessage}
                   onChange={(value) => update("notConfiguredMessage", value)}
                 />
+                <TextField
+                  label="Membro já entrou na família"
+                  value={form.blockedAlreadyInFamilyMessage}
+                  onChange={(value) => update("blockedAlreadyInFamilyMessage", value)}
+                />
               </Section>
             </>
           ) : null}
@@ -649,9 +841,10 @@ function RecruitmentForm({
               />
             </>
           ) : null}
-          {tab === "permissoes" ? (
+          {tab === "permissoes" || tab === "ticket" ? (
             <p className="font-body text-sm text-ink-muted">
-              Esta seção não muda nenhuma mensagem — veja a prévia nas abas de etapa e ficha.
+              Esta seção não muda nenhuma mensagem do wizard — veja a prévia nas abas de etapa e
+              ficha.
             </p>
           ) : null}
         </div>
@@ -726,6 +919,36 @@ function TextField({
         onChange={(event) => onChange(event.target.value)}
         className={INPUT_CLASS}
       />
+    </label>
+  );
+}
+
+function ChannelField({
+  label,
+  value,
+  channels,
+  onChange
+}: {
+  label: string;
+  value: string | null;
+  channels: DiscordChannelSummary[];
+  onChange: (value: string | null) => void;
+}) {
+  return (
+    <label className="flex flex-col gap-1">
+      <span className="font-body text-xs font-medium text-ink-muted">{label}</span>
+      <select
+        value={value ?? ""}
+        onChange={(event) => onChange(event.target.value === "" ? null : event.target.value)}
+        className={INPUT_CLASS}
+      >
+        <option value="">Selecione o canal...</option>
+        {channels.map((channel) => (
+          <option key={channel.id} value={channel.id}>
+            #{channel.name}
+          </option>
+        ))}
+      </select>
     </label>
   );
 }

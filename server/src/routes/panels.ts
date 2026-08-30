@@ -161,8 +161,10 @@ export function registerPanelRoutes(app: FastifyInstance, env: AppEnv): void {
         }
 
         if (body.kind !== undefined) {
-          if (body.kind !== "buttons" && body.kind !== "select") {
-            throw new ValidationError('O tipo do painel precisa ser "buttons" ou "select".');
+          if (body.kind !== "buttons" && body.kind !== "select" && body.kind !== "text") {
+            throw new ValidationError(
+              'O tipo do painel precisa ser "buttons", "select" ou "text".'
+            );
           }
           patch.kind = body.kind;
         }
@@ -205,6 +207,13 @@ export function registerPanelRoutes(app: FastifyInstance, env: AppEnv): void {
           throw new ValidationError(
             "Um painel do tipo dropdown precisa de ao menos uma opção. Adicione opções antes de trocar o tipo."
           );
+        }
+
+        // Painel `text` nao tem dropdown: zera o `select` se o painel tinha
+        // um (ao vir de `select`). Botoes continuam validos, so nao sao
+        // obrigatorios.
+        if (finalKind === "text" && finalSelect) {
+          patch.select = null;
         }
 
         // Toda acao `run` que aponta para uma categoria de suporte precisa
@@ -271,16 +280,13 @@ export function registerPanelRoutes(app: FastifyInstance, env: AppEnv): void {
           return reply.code(404).send({ error: `Painel "${id}" nao encontrado.` });
         }
 
-        const isEmpty =
-          panel.kind === "select"
-            ? !panel.select || panel.select.options.length === 0
-            : panel.buttons.length === 0;
-        if (isEmpty) {
-          throw new ValidationError(
-            panel.kind === "select"
-              ? "Adicione ao menos uma opção ao dropdown antes de publicar."
-              : "Adicione ao menos um botão antes de publicar."
-          );
+        // Painel `text` pode ser publicado so com a mensagem (botoes
+        // opcionais). `buttons` e `select` exigem conteudo.
+        if (panel.kind === "select" && (!panel.select || panel.select.options.length === 0)) {
+          throw new ValidationError("Adicione ao menos uma opção ao dropdown antes de publicar.");
+        }
+        if (panel.kind === "buttons" && panel.buttons.length === 0) {
+          throw new ValidationError("Adicione ao menos um botão antes de publicar.");
         }
 
         const job = await createPanelJob(env, {

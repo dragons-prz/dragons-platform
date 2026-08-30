@@ -35,9 +35,10 @@ Os tipos em `shared/src/panel.ts`, `shared/src/guild-config.ts`,
 `shared/src/support-category.ts` e `shared/src/recruitment-config.ts` são
 cópias deliberadas de `dragonsbot/src/domain/types.ts` (`PanelConfig`,
 `PanelButtonConfig`, `PanelButtonStyle`, `GuildConfig`, `RoleConfigKey`,
-`ChannelConfigKey`, `SupportCategoryConfig`, `RecruitmentFlowConfig` e os
-tipos que ela compõe). Eles descrevem o formato dos mesmos documentos no
-Firestore que o bot lê e escreve.
+`ChannelConfigKey`, `SupportCategoryConfig`, `RecruitmentFlowConfig`
+— incluindo `RecruitmentVerificationTicketConfig` e `RecruitmentRouteConfig`
+— e os tipos que ela compõe; `PanelKind` inclui `"text"`). Eles descrevem o
+formato dos mesmos documentos no Firestore que o bot lê e escreve.
 
 **Qualquer alteração de forma nesses tipos (campos, tipos, valores
 possíveis) precisa ser feita nos DOIS repositórios ao mesmo tempo** —
