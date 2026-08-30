@@ -130,6 +130,45 @@ export interface RecruitmentSheetConfig {
  */
 export type RecruitmentPointsMode = "sum" | "highest";
 
+/**
+ * Configuracao do ticket de verificacao — a thread privada aberta pelo
+ * botao "Verificar-se" de um painel (`actionId: "verification-ticket"`).
+ * Escrita SO pela plataforma; o bot so le.
+ *
+ * Spec: `docs/specs/2026-08-30-verificacao-recrutamento-por-ticket.md`.
+ */
+export interface RecruitmentVerificationTicketConfig {
+  /** Canal de texto onde nasce a thread privada. `null` = ticket nao configurado. */
+  parentChannelId: string | null;
+  /** Nome da thread. Vars: `{user}` `{date}` `{shortid}`. */
+  threadNameTemplate: string;
+  /** Primeiro post da thread. Vars: `{user}` `{recruiter}`. */
+  openMessage: string;
+  /** Post de escalonamento (menciona o cargo `recruiter`). Vars: `{user}`. */
+  escalationMessage: string;
+  /** Post ao fechar/arquivar a thread. Vars: `{user}` `{closer}`. */
+  closeMessage: string;
+  /** Minutos sem recrutamento ate marcar todo o cargo `recruiter`. */
+  escalateAfterMinutes: number;
+  /** Placeholder do select "Veio por alguem?". */
+  recruiterPickerPlaceholder: string;
+  /** Label da opcao "entrei por conta propria". */
+  noRecruiterLabel: string;
+}
+
+/**
+ * Destino da ficha de recrutamento. A rota e escolhida pela area marcada
+ * na etapa 2 do `/recrutar`: se a area `familyAreaId` estiver entre as
+ * escolhidas -> `familyRoute` (Founders / "Verificacao das Posses"); senao
+ * -> `areaRoute` (lideranca de REC).
+ */
+export interface RecruitmentRouteConfig {
+  /** Canal onde a ficha dessa rota e postada. `null` = rota nao configurada. */
+  sheetChannelId: string | null;
+  /** Cargos que podem Confirmar/Rejeitar a ficha dessa rota. */
+  approverRoleIds: string[];
+}
+
 export interface RecruitmentFlowConfig {
   guildId: string;
   starterRoles: RecruitmentStarterRoleOption[];
@@ -141,10 +180,24 @@ export interface RecruitmentFlowConfig {
   stepThree: RecruitmentStepThreeConfig;
   outcome: RecruitmentOutcomeConfig;
   sheet: RecruitmentSheetConfig;
-  /** Cargos que podem Confirmar/Rejeitar a ficha (gerencia/lideres). */
+  /** Ticket de verificacao (thread do botao "Verificar-se"). */
+  verificationTicket: RecruitmentVerificationTicketConfig;
+  /** Qual `RecruitmentAreaOption.id` conta como "recrutamento para a Familia". */
+  familyAreaId: string | null;
+  /** Rota Familia: ficha vai para os Founders ("Verificacao das Posses"). */
+  familyRoute: RecruitmentRouteConfig;
+  /** Rota Area: ficha vai para a lideranca de REC. */
+  areaRoute: RecruitmentRouteConfig;
+  /**
+   * Cargos que podem Confirmar/Rejeitar a ficha (gerencia/lideres).
+   * Fallback dos recrutamentos legados — as rotas novas usam
+   * `familyRoute`/`areaRoute`.
+   */
   approverRoleIds: string[];
   /** Cargos que podem usar `/pontos-dar`. */
   pointsGrantRoleIds: string[];
+  /** Cargos que podem usar `/pontos-resetar`. Vazio = cai em `pointsGrantRoleIds`. */
+  pointsResetRoleIds: string[];
   pointsMode: RecruitmentPointsMode;
   minManualPoints: number;
   maxManualPoints: number;
@@ -158,6 +211,8 @@ export interface RecruitmentFlowConfig {
   notApproverMessage: string;
   notDraftOwnerMessage: string;
   notConfiguredMessage: string;
+  /** Bloqueio do `/recrutar` quando o membro ja tem recrutamento Familia aprovado. */
+  blockedAlreadyInFamilyMessage: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -310,10 +365,27 @@ export const DEFAULT_RECRUITMENT_SHEET: RecruitmentSheetConfig = {
   mentionApprovers: true
 };
 
+export const DEFAULT_RECRUITMENT_VERIFICATION_TICKET: RecruitmentVerificationTicketConfig = {
+  parentChannelId: null,
+  threadNameTemplate: "verificacao-{user}-{shortid}",
+  openMessage: "Ola {user}! Um recrutador vai te atender por aqui.",
+  escalationMessage: "{user} esta aguardando ha mais de 1h — alguem pode dar continuidade?",
+  closeMessage: "Ticket de {user} encerrado por {closer}.",
+  escalateAfterMinutes: 60,
+  recruiterPickerPlaceholder: "Veio por alguem?",
+  noRecruiterLabel: "Nenhum — entrei por conta propria"
+};
+
+export const DEFAULT_RECRUITMENT_ROUTE: RecruitmentRouteConfig = {
+  sheetChannelId: null,
+  approverRoleIds: []
+};
+
 /**
  * Documento default. `starterRoles`/`areas` vazios e `sheet.channelId` nulo
  * significam "ainda nao configurado no painel" — o bot responde
- * `notConfiguredMessage` em vez de tentar rodar o fluxo.
+ * `notConfiguredMessage` em vez de tentar rodar o fluxo. `maxAreas` nasce em
+ * `1` para evitar selecao multipla e mistura de rotas (Familia vs Area).
  */
 export const DEFAULT_RECRUITMENT_FLOW_CONFIG: Omit<
   RecruitmentFlowConfig,
@@ -322,14 +394,19 @@ export const DEFAULT_RECRUITMENT_FLOW_CONFIG: Omit<
   starterRoles: [],
   areas: [],
   minAreas: 1,
-  maxAreas: 2,
+  maxAreas: 1,
   stepOne: DEFAULT_RECRUITMENT_STEP_ONE,
   stepTwo: DEFAULT_RECRUITMENT_STEP_TWO,
   stepThree: DEFAULT_RECRUITMENT_STEP_THREE,
   outcome: DEFAULT_RECRUITMENT_OUTCOME,
   sheet: DEFAULT_RECRUITMENT_SHEET,
+  verificationTicket: DEFAULT_RECRUITMENT_VERIFICATION_TICKET,
+  familyAreaId: null,
+  familyRoute: DEFAULT_RECRUITMENT_ROUTE,
+  areaRoute: DEFAULT_RECRUITMENT_ROUTE,
   approverRoleIds: [],
   pointsGrantRoleIds: [],
+  pointsResetRoleIds: [],
   pointsMode: "sum",
   minManualPoints: -100,
   maxManualPoints: 100,
@@ -340,7 +417,9 @@ export const DEFAULT_RECRUITMENT_FLOW_CONFIG: Omit<
   notApproverMessage: "Voce nao tem permissao para essa acao.",
   notDraftOwnerMessage: "Apenas quem iniciou este recrutamento pode usar estes botoes.",
   notConfiguredMessage:
-    "O fluxo de recrutamento ainda nao foi configurado no painel (cargos de iniciante, areas e canal da ficha)."
+    "O fluxo de recrutamento ainda nao foi configurado no painel (cargos de iniciante, areas e canal da ficha).",
+  blockedAlreadyInFamilyMessage:
+    "Este membro ja entrou na familia e nao pode ser recrutado de novo para ela."
 };
 
 /** Soma/maior valor dos pontos das areas escolhidas, conforme `pointsMode`. */

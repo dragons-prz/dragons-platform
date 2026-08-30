@@ -13,11 +13,16 @@
 export type PanelButtonStyle = "Primary" | "Secondary" | "Success" | "Danger";
 
 /**
- * Tipo do painel: `buttons` (linhas de botoes, o formato historico) ou
- * `select` (um unico dropdown no lugar dos botoes). Documentos antigos nao
- * tem o campo — o mapeamento trata ausencia como `"buttons"`.
+ * Tipo do painel:
+ * - `buttons`: linhas de botoes (o formato historico);
+ * - `select`: um unico dropdown no lugar dos botoes;
+ * - `text`: painel informativo — a mensagem (titulo/descricao/imagem/cor)
+ *   com botoes OPCIONAIS (0..25) e sem dropdown (`select` fica `null`).
+ *
+ * Documentos antigos nao tem o campo — o mapeamento trata ausencia como
+ * `"buttons"`.
  */
-export type PanelKind = "buttons" | "select";
+export type PanelKind = "buttons" | "select" | "text";
 
 /**
  * Formato da mensagem do painel:

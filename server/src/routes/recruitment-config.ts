@@ -61,18 +61,36 @@ export function registerRecruitmentConfigRoutes(app: FastifyInstance, env: AppEn
 
 /** Checa que os cargos/canal referenciados existem mesmo na guild. */
 async function assertGuildRefs(env: AppEnv, config: UpdateRecruitmentConfigRequest): Promise<void> {
+  const referencedChannels: [string, string][] = [
+    ...(config.sheet.channelId
+      ? [[config.sheet.channelId, "canal das fichas"] as [string, string]]
+      : []),
+    ...(config.verificationTicket.parentChannelId
+      ? [
+          [config.verificationTicket.parentChannelId, "canal do ticket de verificação"] as [
+            string,
+            string
+          ]
+        ]
+      : []),
+    ...(config.familyRoute.sheetChannelId
+      ? [[config.familyRoute.sheetChannelId, "canal da ficha (rota Família)"] as [string, string]]
+      : []),
+    ...(config.areaRoute.sheetChannelId
+      ? [[config.areaRoute.sheetChannelId, "canal da ficha (rota Área)"] as [string, string]]
+      : [])
+  ];
+
   const [channels, roles] = await Promise.all([
-    config.sheet.channelId ? getGuildChannels(env, env.discordGuildId) : Promise.resolve([]),
+    referencedChannels.length > 0 ? getGuildChannels(env, env.discordGuildId) : Promise.resolve([]),
     getGuildRoles(env, env.discordGuildId)
   ]);
 
-  if (
-    config.sheet.channelId &&
-    !channels.some((channel) => channel.id === config.sheet.channelId)
-  ) {
-    throw new ValidationError(
-      "O canal das fichas selecionado nao existe ou nao e um canal de texto."
-    );
+  const channelIds = new Set(channels.map((channel) => channel.id));
+  for (const [channelId, label] of referencedChannels) {
+    if (!channelIds.has(channelId)) {
+      throw new ValidationError(`O ${label} selecionado nao existe ou nao e um canal de texto.`);
+    }
   }
 
   const roleIds = new Set(roles.map((role) => role.id));
@@ -86,8 +104,17 @@ async function assertGuildRefs(env: AppEnv, config: UpdateRecruitmentConfigReque
     ...config.approverRoleIds.map(
       (roleId) => [roleId, "cargos que aprovam a ficha"] as [string, string]
     ),
+    ...config.familyRoute.approverRoleIds.map(
+      (roleId) => [roleId, "cargos que confirmam (rota Família)"] as [string, string]
+    ),
+    ...config.areaRoute.approverRoleIds.map(
+      (roleId) => [roleId, "cargos que confirmam (rota Área)"] as [string, string]
+    ),
     ...config.pointsGrantRoleIds.map(
       (roleId) => [roleId, "cargos que podem dar pontos"] as [string, string]
+    ),
+    ...config.pointsResetRoleIds.map(
+      (roleId) => [roleId, "cargos que podem resetar pontos"] as [string, string]
     )
   ];
 

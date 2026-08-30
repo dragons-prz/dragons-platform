@@ -25,7 +25,9 @@ import type {
   RecruitmentFlowConfig,
   RecruitmentMessageConfig,
   RecruitmentPointsMode,
-  RecruitmentStarterRoleOption
+  RecruitmentRouteConfig,
+  RecruitmentStarterRoleOption,
+  RecruitmentVerificationTicketConfig
 } from "./recruitment-config.js";
 
 export type UpdateRecruitmentConfigRequest = Omit<
@@ -43,7 +45,15 @@ export const RECRUITMENT_LIMITS = {
   MAX_MANUAL_POINTS: 10000,
   DRAFT_TTL_MIN: 1,
   DRAFT_TTL_MAX: 1440,
-  MESSAGE_MAX: 500
+  MESSAGE_MAX: 500,
+  /** Templates do ticket de verificacao (open/escalation/close, bloqueio). */
+  TICKET_MESSAGE_MAX: 2000,
+  /** Nome da thread do Discord. */
+  THREAD_NAME_MAX: 100,
+  TICKET_PLACEHOLDER_MAX: 150,
+  TICKET_LABEL_MAX: 100,
+  ESCALATE_MINUTES_MIN: 5,
+  ESCALATE_MINUTES_MAX: 1440
 } as const;
 
 export const RECRUITMENT_OPTION_ID_PATTERN = /^[a-z0-9-]{1,40}$/;
@@ -218,6 +228,75 @@ function validateShortMessage(value: string, label: string): string | null {
   return null;
 }
 
+function validateBoundedText(value: unknown, label: string, max: number): string | null {
+  if (typeof value !== "string" || !value.trim()) return `${label} não pode ficar vazio.`;
+  if (value.length > max) return `${label} não pode ultrapassar ${max} caracteres.`;
+  return null;
+}
+
+function validateVerificationTicket(ticket: RecruitmentVerificationTicketConfig): string | null {
+  if (!ticket || typeof ticket !== "object") return "Ticket de verificação: configuração ausente.";
+  if (ticket.parentChannelId !== null && !DISCORD_SNOWFLAKE_PATTERN.test(ticket.parentChannelId)) {
+    return "Ticket de verificação: o canal onde a thread nasce precisa ser um canal válido do Discord.";
+  }
+  const texts: [unknown, string, number][] = [
+    [
+      ticket.threadNameTemplate,
+      "Ticket de verificação · nome da thread",
+      RECRUITMENT_LIMITS.THREAD_NAME_MAX
+    ],
+    [
+      ticket.openMessage,
+      "Ticket de verificação · mensagem de abertura",
+      RECRUITMENT_LIMITS.TICKET_MESSAGE_MAX
+    ],
+    [
+      ticket.escalationMessage,
+      "Ticket de verificação · mensagem de escalonamento",
+      RECRUITMENT_LIMITS.TICKET_MESSAGE_MAX
+    ],
+    [
+      ticket.closeMessage,
+      "Ticket de verificação · mensagem de encerramento",
+      RECRUITMENT_LIMITS.TICKET_MESSAGE_MAX
+    ],
+    [
+      ticket.recruiterPickerPlaceholder,
+      'Ticket de verificação · texto do "Veio por alguém?"',
+      RECRUITMENT_LIMITS.TICKET_PLACEHOLDER_MAX
+    ],
+    [
+      ticket.noRecruiterLabel,
+      'Ticket de verificação · opção "Nenhum"',
+      RECRUITMENT_LIMITS.TICKET_LABEL_MAX
+    ]
+  ];
+  for (const [value, label, max] of texts) {
+    const error = validateBoundedText(value, label, max);
+    if (error) return error;
+  }
+  if (
+    !Number.isInteger(ticket.escalateAfterMinutes) ||
+    ticket.escalateAfterMinutes < RECRUITMENT_LIMITS.ESCALATE_MINUTES_MIN ||
+    ticket.escalateAfterMinutes > RECRUITMENT_LIMITS.ESCALATE_MINUTES_MAX
+  ) {
+    return `Ticket de verificação: os minutos até escalar precisam ficar entre ${RECRUITMENT_LIMITS.ESCALATE_MINUTES_MIN} e ${RECRUITMENT_LIMITS.ESCALATE_MINUTES_MAX}.`;
+  }
+  return null;
+}
+
+function validateRoute(route: RecruitmentRouteConfig, label: string): string | null {
+  if (!route || typeof route !== "object") return `${label}: configuração ausente.`;
+  if (route.sheetChannelId !== null && !DISCORD_SNOWFLAKE_PATTERN.test(route.sheetChannelId)) {
+    return `${label}: o canal da ficha precisa ser um canal de texto válido do Discord.`;
+  }
+  return validateRoleList(
+    route.approverRoleIds,
+    `${label} · cargos que confirmam`,
+    RECRUITMENT_LIMITS.MAX_APPROVER_ROLES
+  );
+}
+
 /**
  * Valida a FORMA da configuracao inteira, sem checar se os ids existem de
  * fato na guild (isso e feito no servidor, que tem a lista do Discord).
@@ -297,6 +376,25 @@ export function validateRecruitmentConfig(config: UpdateRecruitmentConfigRequest
     return "Marcação dos cargos aprovadores inválida.";
   }
 
+  const ticketError = validateVerificationTicket(config.verificationTicket);
+  if (ticketError) return ticketError;
+
+  if (config.familyAreaId !== null) {
+    if (typeof config.familyAreaId !== "string") return "Área da Família inválida.";
+    if (!config.areas.some((area) => area.id === config.familyAreaId)) {
+      return `A área marcada como Família ("${config.familyAreaId}") não está na lista de áreas.`;
+    }
+  }
+
+  const familyRouteError = validateRoute(
+    config.familyRoute,
+    "Rota Família (Verificação das Posses)"
+  );
+  if (familyRouteError) return familyRouteError;
+
+  const areaRouteError = validateRoute(config.areaRoute, "Rota Área (Liderança de REC)");
+  if (areaRouteError) return areaRouteError;
+
   const approverError = validateRoleList(
     config.approverRoleIds,
     "Cargos que aprovam a ficha",
@@ -310,6 +408,13 @@ export function validateRecruitmentConfig(config: UpdateRecruitmentConfigRequest
     RECRUITMENT_LIMITS.MAX_APPROVER_ROLES
   );
   if (granterError) return granterError;
+
+  const resetError = validateRoleList(
+    config.pointsResetRoleIds,
+    "Cargos que podem resetar pontos",
+    RECRUITMENT_LIMITS.MAX_APPROVER_ROLES
+  );
+  if (resetError) return resetError;
 
   if (!VALID_POINTS_MODES.includes(config.pointsMode)) {
     return "Modo de pontuação inválido.";
@@ -346,6 +451,13 @@ export function validateRecruitmentConfig(config: UpdateRecruitmentConfigRequest
     const error = validateShortMessage(value, label);
     if (error) return error;
   }
+
+  const familyBlockError = validateBoundedText(
+    config.blockedAlreadyInFamilyMessage,
+    'A mensagem de "membro já entrou na família"',
+    RECRUITMENT_LIMITS.TICKET_MESSAGE_MAX
+  );
+  if (familyBlockError) return familyBlockError;
 
   return null;
 }

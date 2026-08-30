@@ -61,6 +61,19 @@ O bot congela essa configuração no momento do `/recrutar`, então salvar aqui
 vale para os **próximos** recrutamentos: wizards em andamento e fichas já
 enviadas mantêm o formato com que nasceram.
 
+A aba **Ticket e rotas** configura o ticket de verificação (a thread privada
+aberta pelo botão "Verificar-se" de um painel) e para onde a ficha é
+encaminhada: a área marcada como **Família** manda a ficha para os Founders
+("Verificação das Posses"); qualquer outra área, para a Liderança de REC.
+Veja `docs/specs/2026-08-30-verificacao-recrutamento-por-ticket.md`.
+
+## Painel só de texto
+
+Um painel pode ter `kind: "text"`: só a mensagem (título, descrição, imagem,
+cor, layout `embed`/`container`), com botões **opcionais**. É o formato dos
+painéis informativos (regras, avisos) e do painel de verificação, que leva
+um único botão "Verificar-se".
+
 ## Verificação
 
 ```bash

@@ -3,7 +3,9 @@ import type {
   RecruitmentButtonConfig,
   RecruitmentFlowConfig,
   RecruitmentMessageConfig,
+  RecruitmentRouteConfig,
   RecruitmentStarterRoleOption,
+  RecruitmentVerificationTicketConfig,
   UpdateRecruitmentConfigRequest
 } from "@dragons/shared";
 import { DEFAULT_RECRUITMENT_FLOW_CONFIG } from "@dragons/shared";
@@ -87,16 +89,54 @@ function normalizeAreas(data: unknown): RecruitmentAreaOption[] {
     .map((option, index) => ({ ...option, order: index }));
 }
 
+function normalizeVerificationTicket(
+  data: Partial<RecruitmentVerificationTicketConfig> | undefined,
+  fallback: RecruitmentVerificationTicketConfig
+): RecruitmentVerificationTicketConfig {
+  return {
+    parentChannelId: data?.parentChannelId ?? fallback.parentChannelId,
+    threadNameTemplate: data?.threadNameTemplate ?? fallback.threadNameTemplate,
+    openMessage: data?.openMessage ?? fallback.openMessage,
+    escalationMessage: data?.escalationMessage ?? fallback.escalationMessage,
+    closeMessage: data?.closeMessage ?? fallback.closeMessage,
+    escalateAfterMinutes:
+      typeof data?.escalateAfterMinutes === "number"
+        ? data.escalateAfterMinutes
+        : fallback.escalateAfterMinutes,
+    recruiterPickerPlaceholder:
+      data?.recruiterPickerPlaceholder ?? fallback.recruiterPickerPlaceholder,
+    noRecruiterLabel: data?.noRecruiterLabel ?? fallback.noRecruiterLabel
+  };
+}
+
+function normalizeRoute(
+  data: Partial<RecruitmentRouteConfig> | undefined,
+  fallback: RecruitmentRouteConfig
+): RecruitmentRouteConfig {
+  return {
+    sheetChannelId: data?.sheetChannelId ?? fallback.sheetChannelId,
+    approverRoleIds: Array.isArray(data?.approverRoleIds)
+      ? data!.approverRoleIds
+      : fallback.approverRoleIds
+  };
+}
+
 function normalize(
   data: Partial<RecruitmentFlowConfig> | null,
   guildId: string
 ): RecruitmentFlowConfig {
   const defaults = DEFAULT_RECRUITMENT_FLOW_CONFIG;
   const now = new Date().toISOString();
+  const areas = normalizeAreas(data?.areas);
+  // `familyAreaId` que aponta para uma area apagada volta a `null`.
+  const familyAreaId =
+    data?.familyAreaId && areas.some((area) => area.id === data.familyAreaId)
+      ? data.familyAreaId
+      : null;
   return {
     guildId,
     starterRoles: normalizeStarterRoles(data?.starterRoles),
-    areas: normalizeAreas(data?.areas),
+    areas,
     minAreas: data?.minAreas ?? defaults.minAreas,
     maxAreas: data?.maxAreas ?? defaults.maxAreas,
     stepOne: {
@@ -144,8 +184,16 @@ function normalize(
       avatarPlacement: data?.sheet?.avatarPlacement ?? defaults.sheet.avatarPlacement,
       mentionApprovers: data?.sheet?.mentionApprovers ?? defaults.sheet.mentionApprovers
     },
+    verificationTicket: normalizeVerificationTicket(
+      data?.verificationTicket,
+      defaults.verificationTicket
+    ),
+    familyAreaId,
+    familyRoute: normalizeRoute(data?.familyRoute, defaults.familyRoute),
+    areaRoute: normalizeRoute(data?.areaRoute, defaults.areaRoute),
     approverRoleIds: data?.approverRoleIds ?? [],
     pointsGrantRoleIds: data?.pointsGrantRoleIds ?? [],
+    pointsResetRoleIds: data?.pointsResetRoleIds ?? [],
     pointsMode: data?.pointsMode ?? defaults.pointsMode,
     minManualPoints: data?.minManualPoints ?? defaults.minManualPoints,
     maxManualPoints: data?.maxManualPoints ?? defaults.maxManualPoints,
@@ -156,6 +204,8 @@ function normalize(
     notApproverMessage: data?.notApproverMessage ?? defaults.notApproverMessage,
     notDraftOwnerMessage: data?.notDraftOwnerMessage ?? defaults.notDraftOwnerMessage,
     notConfiguredMessage: data?.notConfiguredMessage ?? defaults.notConfiguredMessage,
+    blockedAlreadyInFamilyMessage:
+      data?.blockedAlreadyInFamilyMessage ?? defaults.blockedAlreadyInFamilyMessage,
     createdAt: data?.createdAt ?? now,
     updatedAt: data?.updatedAt ?? now
   };
