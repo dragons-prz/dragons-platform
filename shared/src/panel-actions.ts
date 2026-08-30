@@ -40,6 +40,13 @@ export const PANEL_ACTIONS: readonly PanelActionSpec[] = [
         help: "Define canal-pai, cargos de suporte e as mensagens do ticket."
       }
     ]
+  },
+  {
+    id: "verification-ticket",
+    label: "Abrir verificação (Verificar-se)",
+    description:
+      "Pergunta “Veio por alguém?” e abre a thread privada do ticket de verificação. Toda a configuração vem da aba Recrutamento › Ticket e rotas; não tem parâmetros.",
+    params: []
   }
 ];
 
