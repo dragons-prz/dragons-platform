@@ -63,6 +63,7 @@ interface FormState {
   recruiterRoleId: string;
   founderRoleId: string;
   memberRoleId: string;
+  unverifiedRoleId: string;
   approvalChannelId: string;
   recruitmentAnnouncementChannelId: string;
   blacklistLogChannelId: string;
@@ -77,6 +78,7 @@ function toFormState(config: GuildConfig): FormState {
     recruiterRoleId: config.recruiterRoleId,
     founderRoleId: config.founderRoleId,
     memberRoleId: config.memberRoleId,
+    unverifiedRoleId: config.unverifiedRoleId,
     approvalChannelId: config.approvalChannelId ?? "",
     recruitmentAnnouncementChannelId: config.recruitmentAnnouncementChannelId,
     blacklistLogChannelId: config.blacklistLogChannelId,
@@ -98,6 +100,9 @@ function buildPatch(saved: FormState, form: FormState): UpdateGuildConfigRequest
   if (form.recruiterRoleId !== saved.recruiterRoleId) patch.recruiterRoleId = form.recruiterRoleId;
   if (form.founderRoleId !== saved.founderRoleId) patch.founderRoleId = form.founderRoleId;
   if (form.memberRoleId !== saved.memberRoleId) patch.memberRoleId = form.memberRoleId;
+  if (form.unverifiedRoleId !== saved.unverifiedRoleId) {
+    patch.unverifiedRoleId = form.unverifiedRoleId;
+  }
   if (form.approvalChannelId !== saved.approvalChannelId) {
     patch.approvalChannelId = form.approvalChannelId === "" ? null : form.approvalChannelId;
   }
@@ -151,6 +156,7 @@ function SettingsForm({
     form.recruiterRoleId !== "" &&
     form.founderRoleId !== "" &&
     form.memberRoleId !== "" &&
+    form.unverifiedRoleId !== "" &&
     form.recruitmentAnnouncementChannelId !== "" &&
     form.blacklistLogChannelId !== "" &&
     form.memberVerificationChannelId !== "" &&
@@ -227,6 +233,14 @@ function SettingsForm({
           hint="Cargo aplicado ao usuário aprovado."
           value={form.memberRoleId}
           onChange={(value) => set("memberRoleId", value)}
+          options={roleOptions}
+          unknownLabel="Cargo desconhecido"
+        />
+        <SelectField
+          label="Não verificado"
+          hint="Cargo dado a todo mundo que entra no servidor. O bot o remove sozinho quando o membro é verificado ou recrutado."
+          value={form.unverifiedRoleId}
+          onChange={(value) => set("unverifiedRoleId", value)}
           options={roleOptions}
           unknownLabel="Cargo desconhecido"
         />

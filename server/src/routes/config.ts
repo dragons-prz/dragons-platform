@@ -54,7 +54,12 @@ export function registerConfigRoutes(app: FastifyInstance, env: AppEnv): void {
       const roleIds = new Set(roles.map((role) => role.id));
       const channelIds = new Set(channels.map((channel) => channel.id));
 
-      for (const key of ["recruiterRoleId", "founderRoleId", "memberRoleId"] as const) {
+      for (const key of [
+        "recruiterRoleId",
+        "founderRoleId",
+        "memberRoleId",
+        "unverifiedRoleId"
+      ] as const) {
         const value = patch[key];
         if (value !== undefined && !roleIds.has(value)) {
           throw new ValidationError(`O cargo selecionado para "${key}" nao existe neste servidor.`);
@@ -123,7 +128,12 @@ async function computeGuildConfigHealth(env: AppEnv): Promise<GuildConfigHealthR
   const roleTargets: Array<{ id: string; roleId: string; label: string }> = [
     { id: "recruiterRoleId", roleId: config.recruiterRoleId, label: "Cargo de recrutador" },
     { id: "founderRoleId", roleId: config.founderRoleId, label: "Cargo de founder" },
-    { id: "memberRoleId", roleId: config.memberRoleId, label: "Cargo de membro" }
+    { id: "memberRoleId", roleId: config.memberRoleId, label: "Cargo de membro" },
+    {
+      id: "unverifiedRoleId",
+      roleId: config.unverifiedRoleId,
+      label: "Cargo de nao verificado"
+    }
   ];
   for (const target of roleTargets) {
     const role = target.roleId ? rolesById.get(target.roleId) : undefined;
