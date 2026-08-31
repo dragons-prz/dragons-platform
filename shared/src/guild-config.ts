@@ -10,7 +10,7 @@
  * que o bot espera.
  */
 
-export type RoleConfigKey = "recruiter" | "founder" | "member";
+export type RoleConfigKey = "recruiter" | "founder" | "member" | "unverified";
 export type ChannelConfigKey = "approval" | "recruitment" | "blacklist" | "verification" | "exit";
 export type NumberConfigKey = "points";
 
@@ -27,7 +27,8 @@ export const GUILD_CONFIG_DEFAULTS = {
   blacklistLogChannelId: "1541992716496273478",
   memberVerificationChannelId: "1534723901421256784",
   memberExitChannelId: "1534735482460831884",
-  recruitmentPoints: 8
+  recruitmentPoints: 8,
+  unverifiedRoleId: "1542080691288940604"
 } as const;
 
 export interface GuildConfig {
@@ -35,6 +36,12 @@ export interface GuildConfig {
   recruiterRoleId: string;
   founderRoleId: string;
   memberRoleId: string;
+  /**
+   * Cargo "Nao verificado" aplicado na entrada de qualquer membro e removido
+   * quando ele ganha o cargo `member` (verificacao direta ou recrutamento de
+   * Area/Familia). Editavel pelo painel e por `/config set-role unverified`.
+   */
+  unverifiedRoleId: string;
   approvalChannelId: string | null;
   recruitmentAnnouncementChannelId: string;
   blacklistLogChannelId: string;

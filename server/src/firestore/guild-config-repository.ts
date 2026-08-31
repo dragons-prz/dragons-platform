@@ -39,6 +39,7 @@ function normalizeGuildConfig(guildId: string, data: Partial<GuildConfig>): Guil
     recruiterRoleId: data.recruiterRoleId ?? "",
     founderRoleId: data.founderRoleId ?? "",
     memberRoleId: data.memberRoleId ?? "",
+    unverifiedRoleId: data.unverifiedRoleId ?? GUILD_CONFIG_DEFAULTS.unverifiedRoleId,
     approvalChannelId: data.approvalChannelId ?? null,
     recruitmentAnnouncementChannelId:
       data.recruitmentAnnouncementChannelId ??
@@ -79,6 +80,7 @@ export interface GuildConfigUpdate {
   recruiterRoleId?: string;
   founderRoleId?: string;
   memberRoleId?: string;
+  unverifiedRoleId?: string;
   approvalChannelId?: string | null;
   recruitmentAnnouncementChannelId?: string;
   blacklistLogChannelId?: string;
@@ -91,6 +93,7 @@ const WRITABLE_KEYS = [
   "recruiterRoleId",
   "founderRoleId",
   "memberRoleId",
+  "unverifiedRoleId",
   "approvalChannelId",
   "recruitmentAnnouncementChannelId",
   "blacklistLogChannelId",

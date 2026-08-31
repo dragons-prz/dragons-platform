@@ -12,7 +12,12 @@
 export const DISCORD_SNOWFLAKE_PATTERN = /^\d{17,20}$/;
 
 /** Chaves de cargo editaveis pelo painel (todas obrigatorias no `GuildConfig`). */
-export const EDITABLE_ROLE_KEYS = ["recruiterRoleId", "founderRoleId", "memberRoleId"] as const;
+export const EDITABLE_ROLE_KEYS = [
+  "recruiterRoleId",
+  "founderRoleId",
+  "memberRoleId",
+  "unverifiedRoleId"
+] as const;
 
 /** Chaves de canal obrigatorias no `GuildConfig` (nunca nulas). */
 export const REQUIRED_CHANNEL_KEYS = [
@@ -34,6 +39,7 @@ export interface UpdateGuildConfigRequest {
   recruiterRoleId?: string;
   founderRoleId?: string;
   memberRoleId?: string;
+  unverifiedRoleId?: string;
   approvalChannelId?: string | null;
   recruitmentAnnouncementChannelId?: string;
   blacklistLogChannelId?: string;
