@@ -17,7 +17,8 @@ export const PANEL_LIMITS = {
   TITLE_MAX: 256,
   DESCRIPTION_MAX: 4096,
   BUTTON_LABEL_MAX: 80,
-  BUTTON_RESPONSE_MAX: 2000,
+  /** Embed description limit used by the bot for ephemeral button replies. */
+  BUTTON_RESPONSE_MAX: 4096,
   MAX_BUTTONS: 25,
   ID_MAX: 40,
   /**
