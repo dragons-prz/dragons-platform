@@ -11,7 +11,8 @@
  */
 
 export type RoleConfigKey = "recruiter" | "founder" | "member" | "unverified";
-export type ChannelConfigKey = "approval" | "recruitment" | "blacklist" | "verification" | "exit";
+export type ChannelConfigKey =
+  "approval" | "recruitment" | "blacklist" | "verification" | "exit" | "entry";
 export type NumberConfigKey = "points";
 
 /**
@@ -27,6 +28,7 @@ export const GUILD_CONFIG_DEFAULTS = {
   blacklistLogChannelId: "1541992716496273478",
   memberVerificationChannelId: "1534723901421256784",
   memberExitChannelId: "1534735482460831884",
+  memberEntryChannelId: "1551080045357965313",
   recruitmentPoints: 8,
   unverifiedRoleId: "1542080691288940604"
 } as const;
@@ -49,6 +51,8 @@ export interface GuildConfig {
   memberVerificationChannelId: string;
   /** Canal onde o card de saida de membro e postado. */
   memberExitChannelId: string;
+  /** Canal onde o card de entrada de membro e postado. */
+  memberEntryChannelId: string;
   /** Pontos creditados ao recrutador quando um recrutamento e aprovado. */
   recruitmentPoints: number;
   hierarchySeeded: boolean;

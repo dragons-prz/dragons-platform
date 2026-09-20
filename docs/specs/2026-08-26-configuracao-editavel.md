@@ -14,7 +14,7 @@ expõe `GET /api/config`.
 Vários parâmetros que o bot (`~/dev/dragonsbot`) usa em runtime **não estão
 no `GuildConfig`** — são constantes fixas em
 `dragonsbot/src/domain/types.ts` (`MEMBER_VERIFICATION_CHANNEL_ID`,
-`MEMBER_EXIT_CHANNEL_ID`, `RECRUITMENT_POINTS`,
+`MEMBER_EXIT_CHANNEL_ID`, `MEMBER_ENTRY_CHANNEL_ID`, `RECRUITMENT_POINTS`,
 `RECRUITMENT_CREDIT_WINDOW_HOURS`, `DEFAULT_HIERARCHY_ROLES`).
 
 Objetivo do Founder: configurar cargos e a relação deles com o bot, e os
@@ -65,6 +65,7 @@ Muda a forma do `GuildConfig` → **PR coordenado nos dois repos**
 | ------------------------------ | --------------------------------- | --------------------- |
 | `memberVerificationChannelId`  | `MEMBER_VERIFICATION_CHANNEL_ID`  | `1534723901421256784` |
 | `memberExitChannelId`          | `MEMBER_EXIT_CHANNEL_ID`          | `1534735482460831884` |
+| `memberEntryChannelId`         | `MEMBER_ENTRY_CHANNEL_ID`         | `1551080045357965313` |
 | `recruitmentPoints`            | `RECRUITMENT_POINTS`              | `8`                   |
 | `recruitmentCreditWindowHours` | `RECRUITMENT_CREDIT_WINDOW_HOURS` | `24`                  |
 
@@ -74,11 +75,12 @@ Muda a forma do `GuildConfig` → **PR coordenado nos dois repos**
 leitura por guild preenche o campo ausente com o default. As constantes
 continuam no código, agora só como valor padrão.
 
-Lado do painel: `guild-config.ts` espelha os 4 campos;
+Lado do painel: `guild-config.ts` espelha os 5 campos;
 `UpdateGuildConfigRequest` + `validateGuildConfigUpdate` ganham os 2 canais
 (snowflake) e os 2 números (inteiro ≥ 1); `PATCH /api/config` valida a
-existência dos canais na guild; o health check cobre os 2 canais novos;
-`SettingsPage` ganha 2 selects de canal e uma seção "Parâmetros de
+existência dos canais na guild; o health check cobre os 3 canais configuráveis
+do fluxo de entrada/saída/verificação; `SettingsPage` ganha 3 selects de canal
+e uma seção "Parâmetros de
 recrutamento" com 2 inputs numéricos.
 
 ### Fase C — editor de hierarquia de ranks

@@ -24,7 +24,8 @@ export const REQUIRED_CHANNEL_KEYS = [
   "recruitmentAnnouncementChannelId",
   "blacklistLogChannelId",
   "memberVerificationChannelId",
-  "memberExitChannelId"
+  "memberExitChannelId",
+  "memberEntryChannelId"
 ] as const;
 
 /** Chaves numericas editaveis (inteiro >= 1). */
@@ -45,6 +46,7 @@ export interface UpdateGuildConfigRequest {
   blacklistLogChannelId?: string;
   memberVerificationChannelId?: string;
   memberExitChannelId?: string;
+  memberEntryChannelId?: string;
   recruitmentPoints?: number;
 }
 

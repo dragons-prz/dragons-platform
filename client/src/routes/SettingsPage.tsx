@@ -69,6 +69,7 @@ interface FormState {
   blacklistLogChannelId: string;
   memberVerificationChannelId: string;
   memberExitChannelId: string;
+  memberEntryChannelId: string;
   /** Mantidos como string (input controlado); convertidos para número no patch. */
   recruitmentPoints: string;
 }
@@ -84,6 +85,7 @@ function toFormState(config: GuildConfig): FormState {
     blacklistLogChannelId: config.blacklistLogChannelId,
     memberVerificationChannelId: config.memberVerificationChannelId,
     memberExitChannelId: config.memberExitChannelId,
+    memberEntryChannelId: config.memberEntryChannelId,
     recruitmentPoints: String(config.recruitmentPoints)
   };
 }
@@ -117,6 +119,9 @@ function buildPatch(saved: FormState, form: FormState): UpdateGuildConfigRequest
   }
   if (form.memberExitChannelId !== saved.memberExitChannelId) {
     patch.memberExitChannelId = form.memberExitChannelId;
+  }
+  if (form.memberEntryChannelId !== saved.memberEntryChannelId) {
+    patch.memberEntryChannelId = form.memberEntryChannelId;
   }
   if (form.recruitmentPoints !== saved.recruitmentPoints && isValidCount(form.recruitmentPoints)) {
     patch.recruitmentPoints = Number(form.recruitmentPoints);
@@ -160,7 +165,8 @@ function SettingsForm({
     form.recruitmentAnnouncementChannelId !== "" &&
     form.blacklistLogChannelId !== "" &&
     form.memberVerificationChannelId !== "" &&
-    form.memberExitChannelId !== "";
+    form.memberExitChannelId !== "" &&
+    form.memberEntryChannelId !== "";
   const numbersValid = isValidCount(form.recruitmentPoints);
   const canSave = saveState !== "saving" && isDirty && requiredFilled && numbersValid;
 
@@ -287,6 +293,14 @@ function SettingsForm({
           hint="Recebe o card quando um membro sai do servidor."
           value={form.memberExitChannelId}
           onChange={(value) => set("memberExitChannelId", value)}
+          options={channelOptions}
+          unknownLabel="Canal desconhecido"
+        />
+        <SelectField
+          label="Entrada de membro"
+          hint="Recebe o card quando um membro entra no servidor."
+          value={form.memberEntryChannelId}
+          onChange={(value) => set("memberEntryChannelId", value)}
           options={channelOptions}
           unknownLabel="Canal desconhecido"
         />
