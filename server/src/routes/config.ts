@@ -70,7 +70,8 @@ export function registerConfigRoutes(app: FastifyInstance, env: AppEnv): void {
         "recruitmentAnnouncementChannelId",
         "blacklistLogChannelId",
         "memberVerificationChannelId",
-        "memberExitChannelId"
+        "memberExitChannelId",
+        "memberEntryChannelId"
       ] as const) {
         const value = patch[key];
         if (value !== undefined && !channelIds.has(value)) {
@@ -189,6 +190,12 @@ async function computeGuildConfigHealth(env: AppEnv): Promise<GuildConfigHealthR
       id: "memberExitChannelId",
       channelId: config.memberExitChannelId,
       label: "Canal de saida de membro",
+      required: true
+    },
+    {
+      id: "memberEntryChannelId",
+      channelId: config.memberEntryChannelId,
+      label: "Canal de entrada de membro",
       required: true
     },
     {
